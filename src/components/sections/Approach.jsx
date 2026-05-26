@@ -4,13 +4,13 @@ import { assets } from '../../data/siteData'
 export default function Approach() {
   return (
     <SectionReveal className="relative overflow-hidden bg-white py-16 sm:py-24">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+      <div className="px-5 sm:px-8 lg:px-12">
         <div className="overflow-hidden rounded-md bg-cat-dark shadow-[0_22px_70px_rgba(17,17,17,0.18)]">
           <img src={assets.orbitPanel} alt="Abstract red sphere framed by dark gold forms" className="h-full w-full object-cover" loading="lazy" />
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-7xl gap-y-8 px-5 pb-8 pt-24 sm:px-8 md:grid-cols-2 md:gap-x-12 md:pt-32 lg:px-12">
+      <div className="grid gap-y-8 px-5 pb-8 pt-24 sm:px-8 md:grid-cols-2 md:gap-x-12 md:pt-32 lg:px-12">
         <div className="flex items-center">
           <p className="max-w-xl text-base leading-relaxed text-[#555555] sm:text-lg">
             We believe one size fits one, and only one. We work to become the right agency for our clients, researching, learning,

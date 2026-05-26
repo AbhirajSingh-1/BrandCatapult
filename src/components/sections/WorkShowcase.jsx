@@ -1,5 +1,6 @@
-import { ArrowUpRight } from 'lucide-react'
-import { FreeMode } from 'swiper/modules'
+import { useRef, useState } from 'react'
+import { ArrowLeft, ArrowRight, ArrowUpRight } from 'lucide-react'
+import { Autoplay, FreeMode, Keyboard } from 'swiper/modules'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import PillButton from '../common/PillButton'
 import SectionReveal from '../common/SectionReveal'
@@ -45,6 +46,11 @@ function ProjectCard({ project, index }) {
 }
 
 export default function WorkShowcase() {
+  const swiperRef = useRef(null)
+  const [activeSlide, setActiveSlide] = useState(0)
+  const carouselCards = [...projectCards, ...projectCards]
+  const progress = ((activeSlide % projectCards.length) + 1) / projectCards.length
+
   return (
     <SectionReveal id="work" className="overflow-hidden bg-cat-dark text-white">
       <div className="relative min-h-[780px] border-t border-cat-red/30 px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
@@ -103,23 +109,54 @@ export default function WorkShowcase() {
 
           <div className="mt-12">
             <Swiper
-              modules={[FreeMode]}
-              freeMode
+              modules={[Autoplay, FreeMode, Keyboard]}
+              autoplay={{ delay: 3200, disableOnInteraction: false, pauseOnMouseEnter: true }}
+              freeMode={{ enabled: true, momentum: true, momentumRatio: 0.9 }}
               grabCursor
+              keyboard={{ enabled: true }}
+              loop
+              speed={850}
               slidesPerView={1.1}
               spaceBetween={24}
+              watchOverflow={false}
+              onSwiper={(swiper) => {
+                swiperRef.current = swiper
+              }}
+              onSlideChange={(swiper) => setActiveSlide(swiper.realIndex ?? swiper.activeIndex)}
               breakpoints={{
                 640: { slidesPerView: 2.1 },
                 1024: { slidesPerView: 3.05 },
                 1280: { slidesPerView: 3.35 },
               }}
             >
-              {projectCards.map((project, index) => (
-                <SwiperSlide key={project.title}>
-                  <ProjectCard project={project} index={index} />
+              {carouselCards.map((project, index) => (
+                <SwiperSlide key={`${project.title}-${index}`}>
+                  <ProjectCard project={project} index={index % projectCards.length} />
                 </SwiperSlide>
               ))}
             </Swiper>
+          </div>
+
+          <div className="mt-12 flex items-center justify-center gap-5" aria-label="Project carousel controls">
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/28 text-white transition hover:border-cat-red hover:bg-cat-red"
+              onClick={() => swiperRef.current?.slidePrev()}
+              aria-label="Previous project"
+            >
+              <ArrowLeft size={18} strokeWidth={2.5} aria-hidden="true" />
+            </button>
+            <div className="h-px w-56 max-w-[42vw] bg-white/28">
+              <div className="h-[3px] -translate-y-px bg-cat-red transition-all duration-500" style={{ width: `${progress * 100}%` }} />
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/28 text-white transition hover:border-cat-red hover:bg-cat-red"
+              onClick={() => swiperRef.current?.slideNext()}
+              aria-label="Next project"
+            >
+              <ArrowRight size={18} strokeWidth={2.5} aria-hidden="true" />
+            </button>
           </div>
 
           <div className="mt-10 flex justify-center">

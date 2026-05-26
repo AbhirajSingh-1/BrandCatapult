@@ -5,7 +5,7 @@ import { assets, serviceBullets, serviceList } from '../../data/siteData'
 export default function Services() {
   return (
     <SectionReveal id="services" className="slant-top -mt-20 bg-cat-dark pb-28 pt-36 text-white sm:pb-36 sm:pt-44">
-      <div className="mx-auto grid max-w-7xl gap-12 px-5 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-12">
+      <div className="grid w-full gap-12 px-5 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:px-12">
         <div>
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.5em] text-white">Our Services</p>
           <p className="mb-10 text-sm font-bold uppercase tracking-[0.2em] text-cat-red">People</p>
@@ -30,7 +30,7 @@ export default function Services() {
           </div>
         </div>
 
-        <div className="flex flex-col justify-end gap-8">
+        <div className="flex flex-col justify-start gap-8">
           <div className="flex flex-wrap items-center gap-4 text-[11px] font-bold uppercase tracking-[0.38em] text-white/70">
             <span className="text-cat-red">Real Brands.</span>
             <span>Real Shifts.</span>

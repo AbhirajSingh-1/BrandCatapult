@@ -1,4 +1,8 @@
 import heroOrbit from '../assets/67764b46f8cbdb0268dfd884cf610d11d79dac76.png'
+import heroOrbit1 from '../assets/be31f99dcd172e56a25e3f55195f5af2d2cb9e4a.png'
+import heroOrbit2 from '../assets/c918c83cbbf128c4c13eba126fa183ebb5f527c2.png'
+import heroOrbit3 from '../assets/ffad08781666e14e85480717168d510b15096230.png'
+import headerLogo from '../assets/845adb1aded4929604d135cb07f9fdbc8db597e5.png'
 import featuredPerson from '../assets/f96e7ecd88f32d2490dd643badb526a2412ab93e.jpg'
 import nestProject from '../assets/791d3e4339f9e917e86636ecc2d5748ce574aabe.png'
 import happiNestProject from '../assets/8c3c3b6d400a99263fe7ddd92b966fa36d26e3f3.png'
@@ -21,6 +25,10 @@ import cultureMeeting from '../assets/8c94665f5af7c7329a00cba99328f47288491657.j
 
 export const assets = {
   heroOrbit,
+  heroOrbit1,
+  heroOrbit2,
+  heroOrbit3,
+  headerLogo,
   featuredPerson,
   glazaLogo,
   orbitPanel,

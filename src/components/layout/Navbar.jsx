@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import PillButton from '../common/PillButton'
-import { navItems } from '../../data/siteData'
+import { navItems, assets } from '../../data/siteData'
 
-function LogoMark({ dark = true }) {
+function LogoMark() {
   return (
-    <a href="#home" className="group flex items-center gap-2" aria-label="Brand Catapult home">
-      <span className="flex flex-col text-[24px] font-black leading-[0.8] sm:text-[28px]">
-        <span className="text-cat-red">Brand</span>
-        <span className={dark ? 'text-cat-ink' : 'text-white'}>Catapult</span>
-      </span>
-      <span className="relative mt-1 hidden h-10 w-9 sm:block" aria-hidden="true">
-        <span className={`absolute bottom-0 left-1 h-4 w-4 rounded-full border-4 ${dark ? 'border-cat-ink' : 'border-white'}`} />
-        <span className={`absolute left-4 top-2 h-7 w-0.5 -rotate-20 rounded-full ${dark ? 'bg-cat-ink' : 'bg-white'}`} />
-        <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-cat-red" />
-      </span>
+    <a href="#home" className="group flex items-center" aria-label="Brand Catapult home">
+      <img
+        src={assets.headerLogo}
+        alt="Brand Catapult"
+        className="h-9 w-auto object-contain sm:h-11"
+        loading="eager"
+      />
     </a>
   )
 }
@@ -55,11 +52,13 @@ export default function Navbar() {
 
   return (
     <header
-      className={`fixed left-0 right-0 top-0 z-50 transition duration-300 ${
-        isScrolled ? 'bg-white/95 shadow-[0_12px_40px_rgba(16,16,16,0.08)] backdrop-blur' : 'bg-white'
+      className={`fixed left-0 right-0 top-0 z-50 transition-all duration-500 ${
+        isScrolled
+          ? 'bg-white/85 shadow-[0_12px_40px_rgba(16,16,16,0.05)] backdrop-blur-lg border-b border-black/5'
+          : 'bg-transparent'
       }`}
     >
-      <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:h-24 lg:px-12" aria-label="Primary navigation">
+      <nav className={`mx-auto flex max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12 transition-all duration-500 ${isScrolled ? 'h-16 lg:h-20' : 'h-24 lg:h-28'}`} aria-label="Primary navigation">
         <LogoMark />
 
         <div className="hidden items-center gap-7 lg:flex">
@@ -67,7 +66,7 @@ export default function Navbar() {
             <div key={item.id} className="flex items-center gap-7">
               <a
                 href={item.href}
-                className={`text-[10px] font-bold uppercase tracking-[0.22em] transition ${
+                className={`text-[12px] font-bold uppercase tracking-[0.22em] transition ${
                   activeId === item.id ? 'text-cat-red' : 'text-cat-muted hover:text-cat-red'
                 }`}
               >
@@ -78,11 +77,11 @@ export default function Navbar() {
           ))}
         </div>
 
-        <div className="hidden items-center gap-3 lg:flex">
-          <PillButton href="#culture" variant="dark" className="min-h-9 px-6 py-2">
+        <div className="hidden items-center gap-4 lg:flex">
+          <PillButton href="#culture" variant="dark" className="h-10 px-6">
             Join the team
           </PillButton>
-          <PillButton href="#contact" className="min-h-9 px-6 py-2">
+          <PillButton href="#contact" className="h-10 px-6">
             Contact
           </PillButton>
         </div>

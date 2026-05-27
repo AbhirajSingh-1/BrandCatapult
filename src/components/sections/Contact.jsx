@@ -52,10 +52,9 @@ export default function Contact() {
       <div className="bg-cat-red px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div>
-            <h2 className="max-w-xl text-5xl font-light uppercase leading-none text-white sm:text-7xl lg:text-8xl">
-              We Don't
-              <span className="block">Chase.</span>
-              <span className="block">We Calibrate.</span>
+            <h2 className="max-w-xl text-5xl font-light uppercase leading-none text-white sm:text-6xl lg:text-7xl">
+              We Don't Chase.
+              <span className="block whitespace-nowrap">We Calibrate.</span>
             </h2>
             <p className="mt-8 max-w-md text-base leading-relaxed text-white/90">
               If you are thinking big, thinking bold, or thinking finally, you are thinking like us.

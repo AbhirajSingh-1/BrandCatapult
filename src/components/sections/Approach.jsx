@@ -64,89 +64,137 @@ export default function Approach() {
           </div>
 
           {/* col right: blue circle */}
-          <div className="flex items-center justify-center overflow-hidden py-5">
+          <div className="flex items-center justify-center py-5">
             <ParallaxCircle
               offset={[-50, 50]}
               style={{
-                width: 'clamp(220px, 28vw, 320px)',
-                height: 'clamp(220px, 28vw, 320px)',
-                borderRadius: '50%',
-                background: '#dce4f7',
+                position: 'relative',
+                width: 'clamp(300px, 38vw, 460px)',
+                height: 'clamp(300px, 38vw, 460px)',
                 flexShrink: 0,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                position: 'relative',
               }}
             >
-              <motion.div
+              {/* Outermost circle — largest, most transparent */}
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                background: '#e8eef9',
+                opacity: 0.55,
+              }} />
+              {/* Middle circle */}
+              <div style={{
+                position: 'absolute',
+                inset: '10%',
+                borderRadius: '50%',
+                background: '#dce4f7',
+                opacity: 0.70,
+              }} />
+              {/* Inner circle — most opaque */}
+              <div style={{
+                position: 'absolute',
+                inset: '20%',
+                borderRadius: '50%',
+                background: '#c2d0f2',
+                opacity: 0.55,
+              }} />
+              {/* Plan A/B image */}
+              <motion.img
+                src={assets.planSign}
+                alt="Plan A and Plan B signs"
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                style={{ width: '100%', height: '100%', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
-              >
-                <div style={{
-                  position: 'absolute',
-                  inset: -40,
-                  borderRadius: '50%',
-                  border: '24px solid #c2d0f2',
-                  opacity: 0.25,
-                  pointerEvents: 'none',
-                }} />
-                <div style={{
-                  position: 'absolute',
-                  inset: -20,
-                  borderRadius: '50%',
-                  border: '20px solid #c2d0f2',
-                  opacity: 0.35,
-                  pointerEvents: 'none',
-                }} />
-                <img
-                  src={assets.planSign}
-                  alt="Plan A and Plan B signs"
-                  style={{ width: '70%', height: 'auto', objectFit: 'contain', display: 'block', position: 'relative', zIndex: 1 }}
-                  loading="lazy"
-                />
-              </motion.div>
+                style={{
+                  position: 'relative',
+                  zIndex: 1,
+                  width: '70%',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+                loading="lazy"
+              />
             </ParallaxCircle>
           </div>
         </div>
       </div>
 
-      {/* ══ ROW 2: white · yellow circle left · text right ══ */}
-      <div className="bg-white">
+      {/* ══ ROW 2: diagonal bg · yellow circle left · text right ══ */}
+      <div
+        style={{
+          position: 'relative',
+          background: 'linear-gradient(135deg, rgba(220,228,247,0.22) 0%, rgba(250,236,212,0.35) 50%, rgba(245,223,168,0.18) 100%)',
+          clipPath: 'polygon(0 0%, 100% 6%, 100% 100%, 0 94%)',
+          marginTop: '-40px',
+          marginBottom: '-40px',
+          paddingTop: '60px',
+          paddingBottom: '60px',
+          zIndex: 0,
+        }}
+      >
         <div className="grid grid-cols-1 items-center gap-8 px-5 py-8 sm:px-8 md:grid-cols-2 md:gap-0 md:px-0 md:py-6">
 
           {/* col left: yellow circle — on mobile shows after text, on md shows first */}
-          <div className="order-2 flex items-center justify-center overflow-hidden py-5 md:order-1">
+          <div className="order-2 flex items-center justify-center py-5 md:order-1">
             <ParallaxCircle
               offset={[50, -50]}
               style={{
-                width: 'clamp(230px, 30vw, 340px)',
-                height: 'clamp(230px, 30vw, 340px)',
-                borderRadius: '50%',
-                background: '#faecd4',
+                position: 'relative',
+                width: 'clamp(300px, 38vw, 460px)',
+                height: 'clamp(300px, 38vw, 460px)',
                 flexShrink: 0,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <motion.div
+              {/* Outermost circle — largest, most transparent */}
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                background: '#fdf3e0',
+                opacity: 0.6,
+              }} />
+              {/* Middle circle */}
+              <div style={{
+                position: 'absolute',
+                inset: '10%',
+                borderRadius: '50%',
+                background: '#faecd4',
+                opacity: 0.75,
+              }} />
+              {/* Inner circle — most opaque, sits right behind cube */}
+              <div style={{
+                position: 'absolute',
+                inset: '20%',
+                borderRadius: '50%',
+                background: '#f5dfa8',
+                opacity: 0.55,
+              }} />
+              {/* Cube image */}
+              <motion.img
+                src={assets.cubeObject}
+                alt="Translucent cube object"
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                style={{ width: '100%', height: '100%', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <img
-                  src={assets.cubeObject}
-                  alt="Translucent cube object"
-                  style={{ width: '62%', height: 'auto', objectFit: 'contain', display: 'block' }}
-                  loading="lazy"
-                />
-              </motion.div>
+                style={{
+                  position: 'relative',
+                  zIndex: 1,
+                  width: '62%',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+                loading="lazy"
+              />
             </ParallaxCircle>
           </div>
 
@@ -214,34 +262,62 @@ export default function Approach() {
           </div>
 
           {/* col right: green circle — image flipped */}
-          <div className="flex items-center justify-center overflow-hidden py-5">
+          <div className="flex items-center justify-center py-5">
             <ParallaxCircle
               offset={[-40, 40]}
               style={{
-                width: 'clamp(230px, 30vw, 340px)',
-                height: 'clamp(230px, 30vw, 340px)',
-                borderRadius: '50%',
-                background: '#ccdccc',
+                position: 'relative',
+                width: 'clamp(300px, 38vw, 460px)',
+                height: 'clamp(300px, 38vw, 460px)',
                 flexShrink: 0,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <motion.div
+              {/* Outermost circle */}
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                background: '#d6ecd6',
+                opacity: 0.45,
+              }} />
+              {/* Middle circle */}
+              <div style={{
+                position: 'absolute',
+                inset: '10%',
+                borderRadius: '50%',
+                background: '#c4dfc4',
+                opacity: 0.55,
+              }} />
+              {/* Inner circle */}
+              <div style={{
+                position: 'absolute',
+                inset: '20%',
+                borderRadius: '50%',
+                background: '#aecfae',
+                opacity: 0.45,
+              }} />
+              {/* Atom image */}
+              <motion.img
+                src={assets.atomObject}
+                alt="Green orbit object with red sphere"
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                style={{ width: '100%', height: '100%', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <img
-                  src={assets.atomObject}
-                  alt="Green orbit object with red sphere"
-                  style={{ width: '66%', height: 'auto', objectFit: 'contain', display: 'block', transform: 'scaleX(-1)' }}
-                  loading="lazy"
-                />
-              </motion.div>
+                style={{
+                  position: 'relative',
+                  zIndex: 1,
+                  width: '66%',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  display: 'block',
+                  transform: 'scaleX(-1) scaleY(-1)',
+                }}
+                loading="lazy"
+              />
             </ParallaxCircle>
           </div>
         </div>

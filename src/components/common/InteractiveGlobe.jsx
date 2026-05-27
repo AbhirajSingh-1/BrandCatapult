@@ -6,8 +6,24 @@ import { projectGlobePoint } from '../../utils/globeProjection'
 const countries = [
   { name: 'INDIA', lat: 22.9, lon: 78.9 },
   { name: 'USA', lat: 39.5, lon: -98.4 },
-  { name: 'JAPAN', lat: 37.7, lon: 138.2 },
+  { name: 'JAPAN', lat: 36.2, lon: 138.2 },
   { name: 'GERMANY', lat: 51.1, lon: 10.4 },
+  { name: 'BRAZIL', lat: -14.2, lon: -51.9 },
+  { name: 'AUSTRALIA', lat: -25.3, lon: 133.8 },
+  { name: 'CANADA', lat: 56.1, lon: -106.3 },
+  { name: 'UK', lat: 55.4, lon: -3.4 },
+  { name: 'FRANCE', lat: 46.2, lon: 2.2 },
+  { name: 'CHINA', lat: 35.9, lon: 104.2 },
+  { name: 'MEXICO', lat: 23.6, lon: -102.6 },
+  { name: 'SOUTH AFRICA', lat: -30.6, lon: 22.9 },
+  { name: 'UAE', lat: 23.4, lon: 53.8 },
+  { name: 'SINGAPORE', lat: 1.4, lon: 103.8 },
+  { name: 'NIGERIA', lat: 9.1, lon: 8.7 },
+  { name: 'ARGENTINA', lat: -38.4, lon: -63.6 },
+  { name: 'ITALY', lat: 41.9, lon: 12.6 },
+  { name: 'SPAIN', lat: 40.5, lon: -3.7 },
+  { name: 'INDONESIA', lat: -0.8, lon: 113.9 },
+  { name: 'TURKEY', lat: 38.9, lon: 35.2 },
 ]
 
 export default function InteractiveGlobe() {
@@ -68,10 +84,10 @@ export default function InteractiveGlobe() {
           radius,
           center,
         )
-        const distance = Math.hypot(projected.rawX, projected.rawY * 0.82)
 
-        if (projected.z > 0.42 && (!best || distance < best.distance)) {
-          best = { country, projected, distance }
+        // Pick the country with the highest z (most facing the viewer)
+        if (projected.z > 0.15 && (!best || projected.z > best.projected.z)) {
+          best = { country, projected }
         }
       })
 
@@ -83,10 +99,12 @@ export default function InteractiveGlobe() {
         return
       }
 
+      // Place label directly at the country's projected position on the globe
+      const labelW = 110 // approximate half-width of label pill
       const next = {
         name: best.country.name,
-        x: Math.min(size - 92, Math.max(18, best.projected.x + radius * 0.44)),
-        y: Math.min(size - 28, Math.max(28, best.projected.y + radius * 0.02)),
+        x: Math.min(size - labelW, Math.max(0, best.projected.x - labelW / 2)),
+        y: Math.min(size - 36, Math.max(0, best.projected.y - 18)),
         visible: true,
       }
       const current = labelRef.current
@@ -108,7 +126,7 @@ export default function InteractiveGlobe() {
       const radius = size * 0.43
 
       if (!state.dragging) {
-        state.rotationLon += Date.now() > state.idleUntil ? 0.045 + state.velocityLon : state.velocityLon
+        state.rotationLon += Date.now() > state.idleUntil ? 0.12 + state.velocityLon : state.velocityLon
         state.rotationLat += state.velocityLat
         state.velocityLon *= 0.94
         state.velocityLat *= 0.9
@@ -138,6 +156,21 @@ export default function InteractiveGlobe() {
         context.arc(projected.x, projected.y, dotRadius, 0, Math.PI * 2)
         context.fillStyle =
           projected.z > 0.16 ? `rgba(207,36,54,${0.2 + depth * 0.82})` : `rgba(204,204,204,${0.08 + depth * 0.28})`
+        context.fill()
+      })
+
+      // Draw country marker dots
+      countries.forEach((country) => {
+        const projected = projectGlobePoint(country.lat, country.lon, state.rotationLon, state.rotationLat, radius, center)
+        if (projected.z <= 0.05) return
+        const alpha = Math.min(1, (projected.z - 0.05) / 0.4)
+        context.beginPath()
+        context.arc(projected.x, projected.y, radius * 0.022, 0, Math.PI * 2)
+        context.fillStyle = `rgba(207,36,54,${alpha})`
+        context.fill()
+        context.beginPath()
+        context.arc(projected.x, projected.y, radius * 0.012, 0, Math.PI * 2)
+        context.fillStyle = `rgba(255,255,255,${alpha})`
         context.fill()
       })
 

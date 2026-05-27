@@ -96,13 +96,18 @@ function coinPath(cx, rx, ry, sideRx, coinH, topCY) {
 // Instead: we animate the rect's `y` and `height` attributes via a CSS animation
 // defined in a <style> tag, keyed by pillarId.
 
-function SvgPillar({ col, n, baseY, hasRedCap, revealed, delay, pillarId }) {
+function SvgPillar({ col, n, baseY, hasRedCap, photoCY, revealed, delay, pillarId }) {
   const { cx, rx } = COLS[col]
 
   const coins = Array.from({ length: n }, (_, i) => baseY - COIN_H - i * STEP)
   const pillarTopCY = coins[n - 1]
 
-  const clipTop    = pillarTopCY - CAP_RY - PHOTO_R * 2 - 10
+  // Cap sits at the bottom edge of the photo circle, connecting photo to top coin
+  const capCY = hasRedCap && photoCY != null
+    ? photoCY + PHOTO_R - CAP_RY
+    : pillarTopCY - CAP_RY
+
+  const clipTop    = (hasRedCap && photoCY != null ? photoCY - PHOTO_R - 10 : pillarTopCY - CAP_RY - PHOTO_R * 2 - 10)
   const clipBottom = baseY + COIN_RY + 4
   const clipH      = clipBottom - clipTop
   const clipId     = `cp-${pillarId}`
@@ -147,7 +152,7 @@ function SvgPillar({ col, n, baseY, hasRedCap, revealed, delay, pillarId }) {
         {hasRedCap && (
           <ellipse
             cx={cx}
-            cy={pillarTopCY - CAP_RY}
+            cy={capCY}
             rx={CAP_RX}
             ry={CAP_RY}
             fill="#cf2436"
@@ -250,17 +255,14 @@ export default function Culture() {
   const svgRef     = useRef(null)
   const [revealed, setRevealed] = useState(false)
 
-  // Use IntersectionObserver directly — more reliable than useInView for SVG
+  // Keep observing so revealed toggles on scroll in AND out
   useEffect(() => {
     const el = sectionRef.current
     if (!el) return
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setRevealed(true)
-          observer.disconnect()
-        }
+        setRevealed(entry.isIntersecting)
       },
       { threshold: 0.08 }
     )
@@ -296,13 +298,19 @@ export default function Culture() {
         <div className="relative flex flex-col md:flex-row md:items-stretch">
 
           {/* LEFT — SVG coin panel */}
-          <div className="relative w-full shrink-0 md:w-[48%] lg:w-[45%]">
+          <div className="relative w-full shrink-0 md:w-[48%] lg:w-[45%]"
+            style={{ perspective: '1800px' }}
+          >
             <svg
               ref={svgRef}
               viewBox={`0 0 ${VW} ${VH}`}
               xmlns="http://www.w3.org/2000/svg"
               className="w-full h-auto block"
               aria-hidden="true"
+              style={{
+                transform: 'rotateX(8deg)',
+                transformOrigin: '50% 50%',
+              }}
             >
               {/* Top pillars — left & right sit lower than centre */}
               {TOP_N.map((n, col) => (
@@ -310,6 +318,7 @@ export default function Culture() {
                   key={`t${col}`}
                   pillarId={`t${col}`}
                   col={col} n={n} baseY={TOP_BASE_PER_COL[col]} hasRedCap
+                  photoCY={TOP_PHOTO_CY[col]}
                   revealed={revealed}
                   delay={col === 1 ? 0.05 : col === 0 ? 0.15 : 0.2}
                 />

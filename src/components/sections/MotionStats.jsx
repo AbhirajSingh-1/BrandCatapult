@@ -10,7 +10,6 @@ const DOTS = [
   { cls: 'right-[13%] top-[10%]',  size: 'h-4 w-4',   color: 'bg-[#cf2436]' },   // red — top right
   { cls: 'left-[22%]  top-[8%]',   size: 'h-2.5 w-2.5', color: 'bg-[#ffcf3c]' }, // yellow — top left area
   { cls: 'right-[8%]  top-[32%]',  size: 'h-2.5 w-2.5', color: 'bg-[#9cdd98]' }, // green — right mid
-  { cls: 'left-[18%]  top-[68%]',  size: 'h-4 w-4',   color: 'bg-[#7fd4ec]' },   // cyan — bottom left
   { cls: 'right-[24%] top-[72%]',  size: 'h-2.5 w-2.5', color: 'bg-[#86a9ed]' }, // blue — bottom right
 ]
 
@@ -22,7 +21,7 @@ const fadeUp = {
 
 export default function MotionStats() {
   return (
-    <SectionReveal className="relative overflow-hidden bg-white py-24 sm:py-32 lg:py-44">
+    <SectionReveal className="relative overflow-hidden bg-white pt-24 pb-8 sm:pt-32 sm:pb-10 lg:pt-44 lg:pb-12">
 
       {/* ── Decorative dots ── */}
       {DOTS.map((d, i) => (
@@ -96,29 +95,35 @@ export default function MotionStats() {
       </div>
 
       {/* ── Stats + Globe ── */}
-      <div className="mx-auto mt-24 max-w-6xl px-5 sm:px-8 lg:px-14">
-        <div className="grid gap-16 lg:grid-cols-[0.86fr_1.14fr] lg:items-center">
-          <div className="space-y-16 sm:space-y-20">
+      <div className="mx-auto mt-24 max-w-6xl px-8 sm:px-12 lg:px-16">
+        <div className="flex flex-col gap-16 lg:flex-row lg:items-center lg:gap-0">
+
+          {/* LEFT — stats */}
+          <div className="flex flex-col gap-12 lg:w-[42%] lg:gap-14 lg:pr-8">
             {stats.map((stat, i) => (
               <motion.div
                 key={stat.value}
-                className="grid gap-4 sm:grid-cols-[220px_1fr] sm:items-start lg:grid-cols-[280px_1fr]"
+                className="flex items-start gap-6"
                 initial={{ opacity: 0, x: -24 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.65, delay: i * 0.12, ease: 'easeOut' }}
               >
-                <p className="text-[clamp(4.5rem,10vw,8rem)] font-light leading-none text-cat-red">
+                <p className="w-[160px] shrink-0 text-[clamp(3.2rem,6vw,5.2rem)] font-light leading-none text-cat-red">
                   {stat.value}
                 </p>
-                <p className="max-w-sm text-lg leading-snug text-[#808080] sm:pt-3 sm:text-xl">
+                <p className="pt-2 text-[13px] leading-[1.6] text-[#808080] sm:text-[14px]">
                   {stat.copy}
                 </p>
               </motion.div>
             ))}
           </div>
 
-          <InteractiveGlobe />
+          {/* RIGHT — globe, pushed to right edge */}
+          <div className="lg:w-[58%] lg:translate-x-[16%]">
+            <InteractiveGlobe />
+          </div>
+
         </div>
       </div>
     </SectionReveal>

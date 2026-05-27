@@ -3,7 +3,7 @@
  *
  * Coins: SVG closed-path coins with curved elliptical sides (matches reference).
  * Animation: CSS clip-path reveal (inset bottom → 0) on scroll — works on SVG.
- * Mobile: single-column stacked layout, coins scale via SVG viewBox.
+ * Mobile: top copy → SVG cylinders → bottom copy (single-column stacked layout).
  */
 
 import { useRef, useEffect, useState } from 'react'
@@ -12,29 +12,23 @@ import PillButton from '../common/PillButton'
 import { culturePhotos } from '../../data/siteData'
 
 // ─── SVG viewport ─────────────────────────────────────────────────────────────
-// Wide viewBox so coins have proper width and spacing between pillars
 const VW = 600
 const VH = 1200
 
-// Three columns — each pillar has its own rx for per-column width control
-// Gap between pillar edges: col1_cx - col0_cx - col0_rx - col1_rx = spacing
-// 200 - 80 - 58 - 58 = 4px gap  → too tight, use cx spacing of 210
-// col0: cx=80,  rx=58  → edges at 22..138
-// col1: cx=300, rx=58  → edges at 242..358  (gap from col0 = 242-138 = 104px ✓)
-// col2: cx=520, rx=58  → edges at 462..578  (gap from col1 = 462-358 = 104px ✓)
+// Three columns
 const COLS = [
   { cx: 90,  rx: 58 },   // left
-  { cx: 300, rx: 58 },   // centre (tallest, widest)
+  { cx: 300, rx: 58 },   // centre (tallest)
   { cx: 510, rx: 58 },   // right
 ]
 
-// Coin geometry — wider, flatter discs matching reference
-const COIN_H  = 9     // coin height (top-arc to bottom-arc centre distance)
-const COIN_RY = 4     // ellipse ry — very flat disc
-const SIDE_RX = 8     // side arc rx — more pronounced curve on sides (was 2)
-const STEP    = COIN_H  // flush stacking
+// Coin geometry
+const COIN_H  = 9
+const COIN_RY = 4
+const SIDE_RX = 8
+const STEP    = COIN_H
 
-// Red cap — slightly wider than coin
+// Red cap
 const CAP_RY = 8
 const CAP_RX = 64
 
@@ -42,72 +36,60 @@ const CAP_RX = 64
 const PHOTO_R = 56
 
 // Coin counts
-// Upper: left=44, centre=44, right=50 (few extra at bottom)
 const TOP_N = [44, 44, 50]
-// Lower: left=12, centre=20, right=4
 const BOT_N = [12, 20, 4]
 
 // ─── Layout math ─────────────────────────────────────────────────────────────
-const MARGIN_BOT = 80   // extra space below lower cylinders
-const BOT_BASE   = VH - MARGIN_BOT   // more breathing room at bottom
+const MARGIN_BOT = 80
+const BOT_BASE   = VH - MARGIN_BOT
 
-// Pillar height = (n-1)*STEP + COIN_H
 const pillarH = (n) => (n - 1) * STEP + COIN_H
 
-const BOT_H_MAX    = pillarH(BOT_N[1])   // centre bottom pillar height
+const BOT_H_MAX    = pillarH(BOT_N[1])
 const BOT_PHOTO_CY = BOT_N.map(n => BOT_BASE - pillarH(n) - PHOTO_R - 2)
 
 const GROUP_GAP    = 30
 const TOP_BASE     = BOT_BASE - BOT_H_MAX - PHOTO_R * 2 - 6 - GROUP_GAP
 
-// Left & right sit lower than centre by this offset
 const TOP_SIDE_OFFSET = 80
+const RIGHT_EXTRA     = 6
 
-// Right pillar gets 6 extra coins at the bottom — lower its baseY by that amount
-const RIGHT_EXTRA = 6
 const TOP_BASE_PER_COL = [
-  TOP_BASE + TOP_SIDE_OFFSET,                    // left
-  TOP_BASE,                                       // centre — highest
-  TOP_BASE + TOP_SIDE_OFFSET + RIGHT_EXTRA * STEP, // right — extra coins at bottom
+  TOP_BASE + TOP_SIDE_OFFSET,
+  TOP_BASE,
+  TOP_BASE + TOP_SIDE_OFFSET + RIGHT_EXTRA * STEP,
 ]
 
 const TOP_PHOTO_CY = TOP_N.map((n, i) => TOP_BASE_PER_COL[i] - pillarH(n) - PHOTO_R - 2)
 
 // ─── Coin path ────────────────────────────────────────────────────────────────
-// Closed shape: top arc → right curved side → bottom arc → left curved side
-// topCY = y of top arc centre
 function coinPath(cx, rx, ry, sideRx, coinH, topCY) {
   const botCY = topCY + coinH
   const halfH = coinH / 2
   return [
     `M ${cx - rx} ${topCY}`,
-    `A ${rx} ${ry} 0 0 1 ${cx + rx} ${topCY}`,       // top arc L→R
-    `A ${sideRx} ${halfH} 0 0 1 ${cx + rx} ${botCY}`, // right side arc (curved)
-    `A ${rx} ${ry} 0 0 1 ${cx - rx} ${botCY}`,        // bottom arc R→L
-    `A ${sideRx} ${halfH} 0 0 1 ${cx - rx} ${topCY}`, // left side arc (curved)
+    `A ${rx} ${ry} 0 0 1 ${cx + rx} ${topCY}`,
+    `A ${sideRx} ${halfH} 0 0 1 ${cx + rx} ${botCY}`,
+    `A ${rx} ${ry} 0 0 1 ${cx - rx} ${botCY}`,
+    `A ${sideRx} ${halfH} 0 0 1 ${cx - rx} ${topCY}`,
     `Z`,
   ].join(' ')
 }
 
-// ─── SvgPillar with clip-path reveal ─────────────────────────────────────────
-// Uses an SVG <clipPath> with a rect whose Y position animates from bottom to top.
-// We drive this with inline style on the rect — but clipPath children don't
-// respond to CSS transforms in all browsers.
-// Instead: we animate the rect's `y` and `height` attributes via a CSS animation
-// defined in a <style> tag, keyed by pillarId.
-
+// ─── SvgPillar ────────────────────────────────────────────────────────────────
 function SvgPillar({ col, n, baseY, hasRedCap, photoCY, revealed, delay, pillarId }) {
   const { cx, rx } = COLS[col]
 
   const coins = Array.from({ length: n }, (_, i) => baseY - COIN_H - i * STEP)
   const pillarTopCY = coins[n - 1]
 
-  // Cap sits at the bottom edge of the photo circle, connecting photo to top coin
   const capCY = hasRedCap && photoCY != null
     ? photoCY + PHOTO_R - CAP_RY
     : pillarTopCY - CAP_RY
 
-  const clipTop    = (hasRedCap && photoCY != null ? photoCY - PHOTO_R - 10 : pillarTopCY - CAP_RY - PHOTO_R * 2 - 10)
+  const clipTop    = hasRedCap && photoCY != null
+    ? photoCY - PHOTO_R - 10
+    : pillarTopCY - CAP_RY - PHOTO_R * 2 - 10
   const clipBottom = baseY + COIN_RY + 4
   const clipH      = clipBottom - clipTop
   const clipId     = `cp-${pillarId}`
@@ -116,7 +98,6 @@ function SvgPillar({ col, n, baseY, hasRedCap, photoCY, revealed, delay, pillarI
   return (
     <g>
       <defs>
-        {/* Keyframe: rect starts at clipBottom (height=0) and expands upward */}
         {revealed && (
           <style>{`
             @keyframes ${animId} {
@@ -255,7 +236,6 @@ export default function Culture() {
   const svgRef     = useRef(null)
   const [revealed, setRevealed] = useState(false)
 
-  // Keep observing so revealed toggles on scroll in AND out
   useEffect(() => {
     const el = sectionRef.current
     if (!el) return
@@ -279,8 +259,7 @@ export default function Culture() {
       className="relative isolate overflow-hidden"
       style={{ background: '#f4f4f4' }}
     >
-      {/* Background split — sits at the midpoint of the upper cylinders (~52%)
-          so upper cylinders straddle the gray/blue boundary */}
+      {/* Background split */}
       <div
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 pointer-events-none"
@@ -297,8 +276,20 @@ export default function Culture() {
         {/* ── Two-column layout ── */}
         <div className="relative flex flex-col md:flex-row md:items-stretch">
 
+          {/* ── MOBILE ONLY: top copy sits ABOVE the SVG cylinders ── */}
+          <div className="md:hidden px-6 pt-14 pb-0">
+            <CultureCopy
+              title={['Rituals', 'That Echo', 'The Energy']}
+              button="OUR CULTURE"
+              href="#culture"
+              copy="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type."
+              delay={0.25}
+            />
+          </div>
+
           {/* LEFT — SVG coin panel */}
-          <div className="relative w-full shrink-0 md:w-[48%] lg:w-[45%]"
+          <div
+            className="relative w-full shrink-0 -mt-16 md:mt-0 md:w-[48%] lg:w-[45%]"
             style={{ perspective: '1800px' }}
           >
             <svg
@@ -312,12 +303,15 @@ export default function Culture() {
                 transformOrigin: '50% 50%',
               }}
             >
-              {/* Top pillars — left & right sit lower than centre */}
+              {/* Top pillars */}
               {TOP_N.map((n, col) => (
                 <SvgPillar
                   key={`t${col}`}
                   pillarId={`t${col}`}
-                  col={col} n={n} baseY={TOP_BASE_PER_COL[col]} hasRedCap
+                  col={col}
+                  n={n}
+                  baseY={TOP_BASE_PER_COL[col]}
+                  hasRedCap
                   photoCY={TOP_PHOTO_CY[col]}
                   revealed={revealed}
                   delay={col === 1 ? 0.05 : col === 0 ? 0.15 : 0.2}
@@ -329,7 +323,10 @@ export default function Culture() {
                 <SvgPillar
                   key={`b${col}`}
                   pillarId={`b${col}`}
-                  col={col} n={n} baseY={BOT_BASE} hasRedCap={false}
+                  col={col}
+                  n={n}
+                  baseY={BOT_BASE}
+                  hasRedCap={false}
                   revealed={revealed}
                   delay={col === 1 ? 0.28 : 0.33}
                 />
@@ -347,10 +344,11 @@ export default function Culture() {
             </svg>
           </div>
 
-          {/* RIGHT — copy: two blocks aligned with the two halves of the section */}
+          {/* RIGHT — copy column */}
           <div className="relative z-20 flex flex-col md:w-[52%]">
-            {/* TOP copy — sits in the upper (gray) half */}
-            <div className="flex items-center px-6 py-14 md:h-[52%] md:items-start md:px-10 md:pt-20 md:pb-0 lg:px-14 xl:px-20">
+
+            {/* TOP copy — DESKTOP ONLY (mobile version lives above the SVG) */}
+            <div className="hidden md:flex items-center px-6 py-14 md:h-[52%] md:items-start md:px-10 md:pt-20 md:pb-0 lg:px-14 xl:px-20">
               <CultureCopy
                 title={['Rituals', 'That Echo', 'The Energy']}
                 button="OUR CULTURE"
@@ -360,7 +358,7 @@ export default function Culture() {
               />
             </div>
 
-            {/* BOTTOM copy — sits in the lower (blue) half */}
+            {/* BOTTOM copy — visible on BOTH mobile and desktop */}
             <div className="flex items-center px-6 pb-14 md:h-[48%] md:items-start md:px-10 md:pt-12 md:pb-0 lg:px-14 xl:px-20">
               <CultureCopy
                 title={['And Folks', 'Who Make', 'It Happen']}
@@ -371,6 +369,7 @@ export default function Culture() {
               />
             </div>
           </div>
+
         </div>
       </div>
     </section>

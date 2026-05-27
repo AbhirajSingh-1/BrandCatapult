@@ -1,26 +1,48 @@
+import { lazy, Suspense } from 'react'
 import PageLayout from '../components/layout/PageLayout'
-import Approach from '../components/sections/Approach'
-import ClientLogos from '../components/sections/ClientLogos'
-import Contact from '../components/sections/Contact'
-import Culture from '../components/sections/Culture'
 import Hero from '../components/sections/Hero'
 import Intro from '../components/sections/Intro'
-import MotionStats from '../components/sections/MotionStats'
-import Services from '../components/sections/Services'
-import WorkShowcase from '../components/sections/WorkShowcase'
+
+// Lazy-load all below-the-fold sections — reduces initial JS parse time
+const WorkShowcase  = lazy(() => import('../components/sections/WorkShowcase'))
+const Approach      = lazy(() => import('../components/sections/Approach'))
+const Services      = lazy(() => import('../components/sections/Services'))
+const MotionStats   = lazy(() => import('../components/sections/MotionStats'))
+const ClientLogos   = lazy(() => import('../components/sections/ClientLogos'))
+const Culture       = lazy(() => import('../components/sections/Culture'))
+const Contact       = lazy(() => import('../components/sections/Contact'))
+
+// Minimal fallback — invisible spacer keeps layout stable while chunk loads
+function SectionFallback() {
+  return <div className="min-h-[200px]" aria-hidden="true" />
+}
 
 export default function Home() {
   return (
     <PageLayout>
       <Hero />
       <Intro />
-      <WorkShowcase />
-      <Approach />
-      <Services />
-      <MotionStats />
-      <ClientLogos />
-      <Culture />
-      <Contact />
+      <Suspense fallback={<SectionFallback />}>
+        <WorkShowcase />
+      </Suspense>
+      <Suspense fallback={<SectionFallback />}>
+        <Approach />
+      </Suspense>
+      <Suspense fallback={<SectionFallback />}>
+        <Services />
+      </Suspense>
+      <Suspense fallback={<SectionFallback />}>
+        <MotionStats />
+      </Suspense>
+      <Suspense fallback={<SectionFallback />}>
+        <ClientLogos />
+      </Suspense>
+      <Suspense fallback={<SectionFallback />}>
+        <Culture />
+      </Suspense>
+      <Suspense fallback={<SectionFallback />}>
+        <Contact />
+      </Suspense>
     </PageLayout>
   )
 }

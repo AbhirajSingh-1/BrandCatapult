@@ -261,7 +261,7 @@ export default function Approach() {
             </ParallaxText>
           </div>
 
-          {/* col right: green circle — image flipped */}
+          {/* col right: green circle */}
           <div className="flex items-center justify-center py-5">
             <ParallaxCircle
               offset={[-40, 40]}
@@ -299,25 +299,24 @@ export default function Approach() {
                 background: '#aecfae',
                 opacity: 0.45,
               }} />
-              {/* Atom image */}
-              <motion.img
-                src={assets.atomObject}
-                alt="Green orbit object with red sphere"
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  position: 'relative',
-                  zIndex: 1,
-                  width: '66%',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  display: 'block',
-                  transform: 'scaleX(-1) scaleY(-1)',
-                }}
-                loading="lazy"
-              />
+              {/* Atom image — horizontally flipped via wrapper */}
+              <div style={{ position: 'relative', zIndex: 1, width: '66%', transform: 'scaleX(-1)' }}>
+                <motion.img
+                  src={assets.atomObject}
+                  alt="Green orbit object with red sphere"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    display: 'block',
+                  }}
+                  loading="lazy"
+                />
+              </div>
             </ParallaxCircle>
           </div>
         </div>

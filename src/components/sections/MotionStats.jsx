@@ -23,12 +23,12 @@ export default function MotionStats() {
   return (
     <SectionReveal className="relative overflow-hidden bg-white pt-24 pb-8 sm:pt-32 sm:pb-10 lg:pt-44 lg:pb-12">
 
-      {/* ── Decorative dots ── */}
+      {/* ── Decorative dots — hidden on mobile to avoid overlapping text ── */}
       {DOTS.map((d, i) => (
         <motion.span
           key={i}
           aria-hidden="true"
-          className={`absolute rounded-full ${d.cls} ${d.size} ${d.color}`}
+          className={`absolute hidden sm:block rounded-full ${d.cls} ${d.size} ${d.color}`}
           initial={{ opacity: 0, scale: 0 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, amount: 0.3 }}
@@ -103,16 +103,16 @@ export default function MotionStats() {
             {stats.map((stat, i) => (
               <motion.div
                 key={stat.value}
-                className="flex items-start gap-6"
+                className="flex items-center gap-6 sm:gap-8"
                 initial={{ opacity: 0, x: -24 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.65, delay: i * 0.12, ease: 'easeOut' }}
               >
-                <p className="w-[160px] shrink-0 text-[clamp(3.2rem,6vw,5.2rem)] font-light leading-none text-cat-red">
+                <p className="w-[120px] shrink-0 text-[clamp(2.6rem,8vw,5.2rem)] font-light leading-none text-cat-red sm:w-[170px]">
                   {stat.value}
                 </p>
-                <p className="pt-2 text-[13px] leading-[1.6] text-[#808080] sm:text-[14px]">
+                <p className="text-[12px] leading-[1.6] text-[#808080] sm:text-[14px]">
                   {stat.copy}
                 </p>
               </motion.div>

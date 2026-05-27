@@ -1,253 +1,312 @@
-import { useEffect, useRef } from 'react'
+/**
+ * Culture.jsx — "Our Culture" stacked-coin section
+ *
+ * Coin pillars rendered as SVG.
+ * Each coin = white filled rect-with-rounded-top-arc shape.
+ * Result: flat stacked discs, no slinky/spring look.
+ */
+
+import { useRef } from 'react'
+import { motion, useInView } from 'framer-motion'
 import PillButton from '../common/PillButton'
 import { culturePhotos } from '../../data/siteData'
 
-// ─── data ─────────────────────────────────────────────────────────────────────
+// ─── SVG viewport ─────────────────────────────────────────────────────────────
+const VW = 480
+const VH = 980
 
-// Top 3: tall stacks, red cap + glow
-const topStacks = [
-  { id: 'cake',   imageIndex: 0, x: 12,   y: 22.2, width: 22,   height: 44.5, layers: 48, halo: 'rgba(150,183,255,0.32)' },
-  { id: 'team',   imageIndex: 1, x: 36.4, y: 15.6, width: 22,   height: 51.2, layers: 55, halo: 'rgba(255,213,116,0.34)' },
-  { id: 'ritual', imageIndex: 2, x: 62.6, y: 22.4, width: 21.5, height: 44.3, layers: 48, halo: 'rgba(255,188,164,0.28)' },
+// Three columns
+const COLS = [
+  { cx: 80,  rx: 38 },
+  { cx: 240, rx: 38 },
+  { cx: 400, rx: 38 },
 ]
 
-// Bottom 3: aligned with top stacks, no red cap
-// y ≈ where top stacks end (~66.7 %)  height ≈ remaining space
-const bottomStacks = [
-  { id: 'desk',   imageIndex: 3, x: 12,   y: 67, width: 22,   height: 24, layers: 22 },
-  { id: 'board',  imageIndex: 4, x: 36.4, y: 67, width: 22,   height: 24, layers: 22 },
-  { id: 'laptop', imageIndex: 5, x: 62.6, y: 67, width: 21.5, height: 24, layers: 22 },
-]
+// Coin dimensions
+// COIN_H = vertical distance between top-arc centre and bottom-arc centre
+// The side border is a vertical ellipse arc with rx_side = small curve inward
+const COIN_H    = 10    // centre-to-centre distance top→bottom arc
+const COIN_RY   = 4     // ellipse ry for top/bottom arc (flat disc look)
+const COIN_RX   = 38    // ellipse rx (= column half-width)
+// Side arc: connects right endpoint of top arc to right endpoint of bottom arc
+// We use a tall narrow ellipse: rx_side = small (gives the curved-in side look)
+const SIDE_RX   = 4     // horizontal radius of the side arc curve
+const COIN_GAP  = 0     // gap between stacked coins (0 = flush)
+const STEP      = COIN_H + COIN_GAP
 
-const topImageOffsets = {
-  cake:   { size: 84, x: 50, y: -18 },
-  team:   { size: 82, x: 50, y: -17 },
-  ritual: { size: 82, x: 50, y: -18 },
+// Red cap
+const CAP_RY = 6
+const CAP_RX = 42
+
+// Photo
+const PHOTO_R = 50
+
+// Disc counts
+const TOP_N = [36, 48, 36]
+const BOT_N = [16, 20, 16]
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+// baseY = centre of the bottom arc of the bottommost coin
+// Pillar total height (top arc centre to bottom arc centre) = (n-1) * STEP + COIN_H
+// Photo sits above the topmost coin's top arc centre
+
+const MARGIN_BOT  = 12
+const BOT_BASE    = VH - MARGIN_BOT                                          // 968
+
+// Height from bottom arc centre to top arc centre of tallest bottom pillar
+const BOT_H_MAX   = (BOT_N[1] - 1) * STEP + COIN_H                          // 190+10=200
+// Photo centre = BOT_BASE - BOT_H_MAX - PHOTO_R - 2
+const BOT_PHOTO_CY = BOT_N.map(n =>
+  BOT_BASE - ((n - 1) * STEP + COIN_H) - PHOTO_R - 2
+)
+
+const GROUP_GAP   = 26
+// TOP_BASE = bottom of top pillar group = top photo top of bottom group - gap
+const TOP_BASE    = BOT_BASE - BOT_H_MAX - PHOTO_R * 2 - 4 - GROUP_GAP
+
+const TOP_PHOTO_CY = TOP_N.map(n =>
+  TOP_BASE - ((n - 1) * STEP + COIN_H) - PHOTO_R - 2
+)
+
+// ─── Coin path builder ────────────────────────────────────────────────────────
+/**
+ * Each coin is a closed path with:
+ *   - Top edge:    elliptical arc (rx, ry) left→right  [the top face]
+ *   - Right side:  elliptical arc (SIDE_RX, COIN_H/2) top-right→bottom-right
+ *                  This gives the curved-inward side border matching the reference
+ *   - Bottom edge: elliptical arc (rx, ry) right→left  [the bottom face]
+ *   - Left side:   elliptical arc (SIDE_RX, COIN_H/2) bottom-left→top-left
+ *
+ * `topCY` = y-coordinate of the TOP arc centre (not the top edge)
+ * Top arc endpoints are at y = topCY (centre of top ellipse)
+ * Bottom arc endpoints are at y = topCY + COIN_H
+ */
+function coinPath(cx, rx, ry, sideRx, coinH, topCY) {
+  const botCY = topCY + coinH
+  const halfH = coinH / 2
+  return [
+    // Start at left end of top arc
+    `M ${cx - rx} ${topCY}`,
+    // Top arc: left → right (sweep=1 = clockwise = top of ellipse going right)
+    `A ${rx} ${ry} 0 0 1 ${cx + rx} ${topCY}`,
+    // Right side arc: top-right → bottom-right (curved inward)
+    // Large-arc=0, sweep=1 (curves right/outward slightly then down)
+    `A ${sideRx} ${halfH} 0 0 1 ${cx + rx} ${botCY}`,
+    // Bottom arc: right → left (sweep=1 = same direction = bottom of ellipse going left)
+    `A ${rx} ${ry} 0 0 1 ${cx - rx} ${botCY}`,
+    // Left side arc: bottom-left → top-left (curved inward, mirror of right)
+    `A ${sideRx} ${halfH} 0 0 1 ${cx - rx} ${topCY}`,
+    `Z`,
+  ].join(' ')
 }
 
-// ─── shared coin layers ────────────────────────────────────────────────────────
+// ─── SvgPillar ────────────────────────────────────────────────────────────────
+function SvgPillar({ col, n, baseY, hasRedCap, inView, delay }) {
+  const { cx, rx } = COLS[col]
 
-function CoinLayers({ layers }) {
-  return Array.from({ length: layers }).map((_, i) => (
-    <span
-      key={i}
-      className="absolute left-1/2 h-[13px] w-full -translate-x-1/2 rounded-[50%] border border-cat-dark bg-white"
-      style={{ bottom: `${(i / Math.max(layers - 1, 1)) * 96}%`, zIndex: i }}
-      aria-hidden="true"
-    />
-  ))
-}
+  // topCY of each coin's top arc, from bottom coin (index 0) upward
+  // baseY = centre of the bottom arc of the bottommost coin
+  const coins = Array.from({ length: n }, (_, i) => {
+    const topCY = baseY - COIN_H - i * STEP
+    return topCY
+  })
 
-// ─── top coin stack ────────────────────────────────────────────────────────────
-
-function CoinStack({ stack, scrollRef }) {
-  const item   = culturePhotos[stack.imageIndex]
-  const offset = topImageOffsets[stack.id]
-  const coinsRef = useRef(null)
-
-  useEffect(() => {
-    const el = coinsRef.current
-    if (!el || !scrollRef?.current) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        el.style.clipPath = entry.isIntersecting
-          ? 'inset(0% 0 0% 0)'
-          : 'inset(100% 0 0% 0)'
-      },
-      { root: null, threshold: 0.05 },
-    )
-    observer.observe(scrollRef.current)
-    return () => observer.disconnect()
-  }, [scrollRef])
+  const pillarTopCY = coins[n - 1]   // top arc centre of the topmost coin
 
   return (
-    <div
-      className="absolute"
-      style={{ left: `${stack.x}%`, top: `${stack.y}%`, width: `${stack.width}%`, height: `${stack.height}%` }}
+    <motion.g
+      style={{ transformOrigin: `${cx}px ${baseY}px` }}
+      initial={{ scaleY: 0 }}
+      animate={inView ? { scaleY: 1 } : { scaleY: 0 }}
+      transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay }}
     >
-      {/* coin layers — scroll-reveal via clip-path */}
-      <div
-        ref={coinsRef}
-        className="absolute inset-0"
-        style={{
-          clipPath: 'inset(100% 0 0% 0)',
-          transition: 'clip-path 0.9s cubic-bezier(0.22,1,0.36,1)',
-        }}
-      >
-        <CoinLayers layers={stack.layers} />
-        {/* red cap */}
-        <span
-          className="absolute left-1/2 top-0 h-[18px] w-[112%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-cat-dark bg-cat-red"
-          style={{ zIndex: stack.layers + 10 }}
-          aria-hidden="true"
+      {/* Each coin: closed path with curved sides */}
+      {coins.map((topCY, i) => (
+        <path
+          key={i}
+          d={coinPath(cx, rx, COIN_RY, SIDE_RX, COIN_H, topCY)}
+          fill="white"
+          stroke="#1a1a1a"
+          strokeWidth="0.85"
         />
-      </div>
+      ))}
 
-      {/* photo — z-index above every coin layer */}
-      <div
-        className="absolute aspect-square"
-        style={{
-          zIndex:    stack.layers + 50,
-          width:     `${offset.size}%`,
-          left:      `${offset.x}%`,
-          top:       `${offset.y}%`,
-          transform: 'translateX(-50%)',
-        }}
-      >
-        <span
-          className="absolute left-1/2 top-1/2 -z-10 aspect-square w-[220%] -translate-x-1/2 -translate-y-1/2 rounded-full"
-          style={{ background: `radial-gradient(circle, ${stack.halo} 0%, transparent 70%)` }}
-          aria-hidden="true"
+      {/* Red cap on top */}
+      {hasRedCap && (
+        <ellipse
+          cx={cx}
+          cy={pillarTopCY - CAP_RY}
+          rx={CAP_RX}
+          ry={CAP_RY}
+          fill="#cf2436"
+          stroke="#1a1a1a"
+          strokeWidth="0.85"
         />
-        <img
-          src={item.image}
-          alt={item.alt}
-          className="h-full w-full rounded-full border border-cat-dark object-cover"
-          loading="lazy"
-        />
-      </div>
-    </div>
+      )}
+    </motion.g>
   )
 }
 
-// ─── bottom coin stack (no red cap, image on top) ─────────────────────────────
-
-function BottomCoinStack({ stack, scrollRef }) {
-  const item     = culturePhotos[stack.imageIndex]
-  const coinsRef = useRef(null)
-
-  useEffect(() => {
-    const el = coinsRef.current
-    if (!el || !scrollRef?.current) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        el.style.clipPath = entry.isIntersecting
-          ? 'inset(0% 0 0% 0)'
-          : 'inset(100% 0 0% 0)'
-      },
-      { root: null, threshold: 0.05 },
-    )
-    observer.observe(scrollRef.current)
-    return () => observer.disconnect()
-  }, [scrollRef])
+// ─── SvgPhoto ─────────────────────────────────────────────────────────────────
+function SvgPhoto({ id, col, cy, src, halo, inView, delay }) {
+  const { cx } = COLS[col]
+  const clipId = `clip-${id}`
+  const glowId = `glow-${id}`
 
   return (
-    <div
-      className="absolute"
-      style={{ left: `${stack.x}%`, top: `${stack.y}%`, width: `${stack.width}%`, height: `${stack.height}%` }}
+    <motion.g
+      style={{ transformOrigin: `${cx}px ${cy}px` }}
+      initial={{ opacity: 0, scale: 0.6 }}
+      animate={inView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }}
+      transition={{ duration: 0.65, ease: [0.34, 1.4, 0.64, 1], delay }}
     >
-      {/* coin layers — no red cap, scroll-reveal */}
-      <div
-        ref={coinsRef}
-        className="absolute inset-0"
-        style={{
-          clipPath: 'inset(100% 0 0% 0)',
-          transition: 'clip-path 0.9s cubic-bezier(0.22,1,0.36,1)',
-        }}
-      >
-        <CoinLayers layers={stack.layers} />
-      </div>
-
-      {/* photo ── sits on the topmost coin
-          • bottom: 96%  → image bottom edge aligns with top coin bottom edge
-          • z-index 999  → above every top-stack coin (max ~55 + 50 = 105)        */}
-      <div
-        className="absolute aspect-square"
-        style={{
-          zIndex:    999,
-          width:     '84%',
-          left:      '50%',
-          bottom:    '96%',
-          transform: 'translateX(-50%)',
-        }}
-      >
-        <img
-          src={item.image}
-          alt={item.alt}
-          className="h-full w-full rounded-full border border-cat-dark object-cover"
-          loading="lazy"
-        />
-      </div>
-    </div>
-  )
-}
-
-// ─── copy block ───────────────────────────────────────────────────────────────
-
-function CultureCopy({ eyebrow, title, button, copy, lower = false }) {
-  return (
-    <div
-      className={`relative z-20 px-5 sm:px-8 md:absolute md:px-0 ${
-        lower
-          ? 'pt-12 md:left-[52%] md:top-[55%] md:pt-0'
-          : 'pt-8  md:left-[52%] md:top-[4%]  md:pt-0'
-      }`}
-    >
-      <div className="relative max-w-[360px] lg:max-w-[470px]">
-        {eyebrow && (
-          <p className="mb-4 text-[12px] font-bold uppercase text-cat-red md:mb-2">{eyebrow}</p>
+      <defs>
+        {halo && (
+          <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stopColor={halo} stopOpacity="0.8" />
+            <stop offset="55%"  stopColor={halo} stopOpacity="0.15" />
+            <stop offset="100%" stopColor={halo} stopOpacity="0" />
+          </radialGradient>
         )}
-        <div className="relative inline-block">
-          <h2 className="text-[42px] font-light uppercase leading-[1.08] tracking-normal text-[#343434] sm:text-[50px] md:text-[40px] lg:text-[62px]">
-            {title.map((line) => (
-              <span key={line} className="block">{line}</span>
-            ))}
-          </h2>
-          <PillButton
-            href={lower ? '#contact' : '#culture'}
-            className={`mt-3 h-7 min-h-7 whitespace-nowrap px-3 py-1 text-[10px] tracking-[0.12em] md:absolute md:mt-0 ${
-              lower ? 'md:left-[69%] md:top-[59%]' : 'md:left-[58%] md:top-[10%]'
-            }`}
-          >
-            {button}
-          </PillButton>
-        </div>
-        <p className="mt-5 max-w-[330px] text-[12px] leading-[1.25] text-[#7f7f7f] lg:max-w-[420px] lg:text-sm">
-          {copy}
-        </p>
-      </div>
-    </div>
+        <clipPath id={clipId}>
+          <circle cx={cx} cy={cy} r={PHOTO_R} />
+        </clipPath>
+      </defs>
+
+      {halo && (
+        <circle cx={cx} cy={cy} r={PHOTO_R * 2.5} fill={`url(#${glowId})`} />
+      )}
+
+      <image
+        href={src}
+        x={cx - PHOTO_R}
+        y={cy - PHOTO_R}
+        width={PHOTO_R * 2}
+        height={PHOTO_R * 2}
+        clipPath={`url(#${clipId})`}
+        preserveAspectRatio="xMidYMid slice"
+      />
+
+      <circle cx={cx} cy={cy} r={PHOTO_R} fill="none" stroke="#1a1a1a" strokeWidth="0.9" />
+    </motion.g>
   )
 }
 
-// ─── section ──────────────────────────────────────────────────────────────────
+// ─── CultureCopy ──────────────────────────────────────────────────────────────
+function CultureCopy({ title, button, href, copy, delay }) {
+  return (
+    <motion.div
+      className="relative"
+      initial={{ opacity: 0, y: 32 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.75, ease: 'easeOut', delay }}
+    >
+      <div className="relative inline-block">
+        <h2 className="text-[34px] font-light uppercase leading-[1.04] tracking-tight text-[#343434] sm:text-[42px] md:text-[34px] lg:text-[52px] xl:text-[60px]">
+          {title.map((line) => (
+            <span key={line} className="block">{line}</span>
+          ))}
+        </h2>
+        <PillButton
+          href={href}
+          className="absolute right-0 top-[20%] translate-x-[30%] -translate-y-1/2 !h-7 !min-h-7 whitespace-nowrap !px-4 !py-0 !text-[9px] !tracking-[0.13em] md:!text-[10px]"
+        >
+          {button}
+        </PillButton>
+      </div>
+      <p className="mt-5 max-w-[300px] text-[11.5px] leading-[1.65] text-[#808080] lg:max-w-[360px] lg:text-[13px]">
+        {copy}
+      </p>
+    </motion.div>
+  )
+}
 
+// ─── Section ──────────────────────────────────────────────────────────────────
 export default function Culture() {
   const sectionRef = useRef(null)
+  const inView     = useInView(sectionRef, { once: true, amount: 0.05 })
+  const photos     = culturePhotos
 
   return (
-    <section ref={sectionRef} id="culture" className="relative isolate overflow-hidden bg-white">
-      <div className="absolute inset-x-0 bottom-0 top-[42%] -z-10 bg-[#eaf1fc]" aria-hidden="true" />
+    <section
+      ref={sectionRef}
+      id="culture"
+      className="relative isolate overflow-hidden"
+      style={{ background: '#f4f4f4' }}
+    >
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 pointer-events-none"
+        style={{ top: '44%', background: '#e6edf8' }}
+      />
 
-      <div className="relative mx-auto max-w-[1280px] pb-16 md:h-[744px] md:pb-0 lg:h-[900px]">
-        <div className="absolute inset-x-0 bottom-0 top-[42%] bg-[#eaf1fc]" aria-hidden="true" />
+      <div className="relative mx-auto max-w-[1280px]">
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 pointer-events-none"
+          style={{ top: '44%', background: '#e6edf8' }}
+        />
 
-        {/* left panel ── all stacks */}
-        <div className="relative mx-auto h-[650px] w-full max-w-[390px] md:absolute md:left-0 md:top-0 md:h-full md:w-1/2 md:max-w-none">
-          {topStacks.map((stack) => (
-            <CoinStack key={stack.id} stack={stack} scrollRef={sectionRef} />
-          ))}
-          {bottomStacks.map((stack) => (
-            <BottomCoinStack key={stack.id} stack={stack} scrollRef={sectionRef} />
-          ))}
-        </div>
+        <div className="relative flex flex-col md:flex-row md:items-stretch">
 
-        {/* right panel ── copy */}
-        <div className="relative z-20 pt-0 md:static">
-          <CultureCopy
-            eyebrow="Culture"
-            title={['Rituals', 'That Echo', 'The Energy']}
-            button="Our Culture"
-            copy="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type"
-          />
-          <CultureCopy
-            lower
-            title={['And Folks', 'Who Make', 'It Happen']}
-            button="Join the team"
-            copy="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type"
-          />
+          {/* LEFT — coin SVG */}
+          <div className="relative w-full shrink-0 md:w-[48%] lg:w-[45%]">
+            <svg
+              viewBox={`0 0 ${VW} ${VH}`}
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-full h-auto block"
+              aria-hidden="true"
+            >
+              {/* Top pillars (red cap) */}
+              {TOP_N.map((n, col) => (
+                <SvgPillar
+                  key={`t${col}`}
+                  col={col} n={n} baseY={TOP_BASE} hasRedCap
+                  inView={inView}
+                  delay={col === 1 ? 0.05 : col === 0 ? 0.15 : 0.2}
+                />
+              ))}
+
+              {/* Bottom pillars (no cap) */}
+              {BOT_N.map((n, col) => (
+                <SvgPillar
+                  key={`b${col}`}
+                  col={col} n={n} baseY={BOT_BASE} hasRedCap={false}
+                  inView={inView}
+                  delay={col === 1 ? 0.28 : 0.33}
+                />
+              ))}
+
+              {/* Top photos */}
+              <SvgPhoto id="tL" col={0} cy={TOP_PHOTO_CY[0]} src={photos[0].image} halo="#6496ff" inView={inView} delay={0.70} />
+              <SvgPhoto id="tC" col={1} cy={TOP_PHOTO_CY[1]} src={photos[1].image} halo="#ffc846" inView={inView} delay={0.58} />
+              <SvgPhoto id="tR" col={2} cy={TOP_PHOTO_CY[2]} src={photos[2].image} halo="#ff8c6e" inView={inView} delay={0.75} />
+
+              {/* Bottom photos */}
+              <SvgPhoto id="bL" col={0} cy={BOT_PHOTO_CY[0]} src={photos[3].image} inView={inView} delay={0.85} />
+              <SvgPhoto id="bC" col={1} cy={BOT_PHOTO_CY[1]} src={photos[4].image} inView={inView} delay={0.80} />
+              <SvgPhoto id="bR" col={2} cy={BOT_PHOTO_CY[2]} src={photos[5].image} inView={inView} delay={0.85} />
+            </svg>
+          </div>
+
+          {/* RIGHT — copy */}
+          <div className="relative z-20 flex flex-col justify-around gap-16 px-6 py-14 md:w-[52%] md:py-20 md:pl-10 md:pr-8 lg:pl-14 lg:pr-10 xl:pl-20">
+            <CultureCopy
+              title={['Rituals', 'That Echo', 'The Energy']}
+              button="OUR CULTURE"
+              href="#culture"
+              copy="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type."
+              delay={0.25}
+            />
+            <CultureCopy
+              title={['And Folks', 'Who Make', 'It Happen']}
+              button="JOIN THE TEAM"
+              href="#contact"
+              copy="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type."
+              delay={0.45}
+            />
+          </div>
         </div>
       </div>
     </section>

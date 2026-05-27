@@ -68,11 +68,11 @@ export default function WorkShowcase() {
   return (
     <SectionReveal id="work" className="overflow-hidden bg-cat-dark text-white">
       <div className="relative border-t border-cat-red/25 bg-cat-dark">
-        <div className="relative min-h-[560px] overflow-hidden sm:min-h-[620px] md:min-h-[535px] lg:min-h-[650px]">
+        <div className="relative flex min-h-[680px] flex-col overflow-hidden sm:min-h-[780px] md:min-h-[900px] lg:min-h-[100vh]">
           <motion.img
             src={assets.featuredPerson}
             alt="Featured Accato campaign performer in dark hoodie"
-            className="absolute inset-0 h-full w-full object-cover object-[50%_22%] opacity-80"
+            className="absolute inset-0 h-full w-full object-cover object-[50%_5%] opacity-80"
             loading="lazy"
             initial={{ scale: 1.04 }}
             whileInView={{ scale: 1 }}
@@ -81,16 +81,20 @@ export default function WorkShowcase() {
           />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_45%_20%,rgba(255,255,255,0.12),transparent_30%),linear-gradient(180deg,rgba(18,18,18,0.22),rgba(18,18,18,0.52)_62%,#171717_100%)]" aria-hidden="true" />
 
-          <div className="relative z-10 mx-auto max-w-[1500px] px-6 pt-24 sm:px-10 md:px-12 md:pt-28 lg:px-20">
+          {/* eyebrow pinned to top */}
+          <div className="relative z-10 mx-auto w-full max-w-[1500px] px-6 pt-24 sm:px-10 md:px-12 md:pt-28 lg:px-20">
             <p className="text-[11px] font-bold uppercase tracking-[0.55em] text-white/78">Featured Projects</p>
+          </div>
 
-            <div className="mt-24 grid gap-8 md:grid-cols-[0.82fr_0.36fr_0.74fr] md:items-start lg:mt-32 lg:grid-cols-[0.9fr_0.34fr_0.78fr]">
+          {/* content pinned to bottom of image */}
+          <div className="relative z-10 mt-auto mx-auto w-full max-w-[1500px] px-6 pb-12 sm:px-10 md:px-12 md:pb-16 lg:px-20 lg:pb-20">
+            <div className="grid gap-8 md:grid-cols-[0.82fr_0.36fr_0.74fr] md:items-end lg:grid-cols-[0.9fr_0.34fr_0.78fr]">
               <div>
                 <div className="flex items-center gap-5">
                   <span className="font-mono text-[13px] font-bold text-cat-red">(01)</span>
                   <h2 className="text-5xl font-black leading-none sm:text-6xl md:text-[44px] lg:text-[58px]">accato</h2>
                 </div>
-                <div className="mt-20 flex items-center gap-5 md:mt-[72px]">
+                <div className="mt-6 flex items-center gap-5">
                   <p className="text-2xl font-light uppercase text-white/[0.045] sm:text-4xl md:text-[28px] lg:text-[46px]">We Adapt For You</p>
                   <button
                     type="button"
@@ -102,9 +106,9 @@ export default function WorkShowcase() {
                 </div>
               </div>
 
-              <h3 className="text-[15px] font-bold uppercase tracking-[0.18em] text-cat-red md:pt-2">Our Approach</h3>
+              <h3 className="text-[15px] font-bold uppercase tracking-[0.18em] text-cat-red">Our Approach</h3>
 
-              <div className="max-w-[360px] md:pt-1">
+              <div className="max-w-[360px]">
                 <div className="mb-4 flex flex-wrap gap-2">
                   <Tag>Branding</Tag>
                   <Tag filled>Strategy</Tag>

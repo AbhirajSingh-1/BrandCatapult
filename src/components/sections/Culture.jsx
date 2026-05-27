@@ -46,13 +46,16 @@ function CulturePhoto({ stack, item }) {
         transform: 'translateX(-50%)',
       }}
     >
-      <span
-        className="absolute left-1/2 top-1/2 -z-10 aspect-square w-[190%] -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{
-          background: `radial-gradient(circle, ${stack.halo} 0 20%, transparent 21% 35%, ${stack.halo} 36% 48%, transparent 49% 61%, ${stack.halo} 62% 72%, transparent 73%)`,
-        }}
-        aria-hidden="true"
-      />
+      {/* soft radial glow only on top stacks (cap: true) */}
+      {stack.cap && (
+        <span
+          className="absolute left-1/2 top-1/2 -z-10 aspect-square w-[220%] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            background: `radial-gradient(circle, ${stack.halo} 0%, transparent 70%)`,
+          }}
+          aria-hidden="true"
+        />
+      )}
       <img src={item.image} alt={item.alt} className="h-full w-full rounded-full border border-cat-dark object-cover" loading="lazy" />
     </div>
   )
@@ -119,7 +122,7 @@ function CultureCopy({ eyebrow, title, button, copy, lower = false }) {
 
 export default function Culture() {
   return (
-    <section id="culture" className="relative isolate overflow-hidden border-t-[6px] border-[#4a2d36] bg-white">
+    <section id="culture" className="relative isolate overflow-hidden bg-white">
       <div className="absolute inset-x-0 bottom-0 top-[42%] -z-10 bg-[#eaf1fc]" aria-hidden="true" />
       <div className="relative mx-auto max-w-[1280px] pb-16 md:h-[744px] md:pb-0 lg:h-[900px]">
         <div className="absolute inset-x-0 bottom-0 top-[42%] bg-[#eaf1fc]" aria-hidden="true" />

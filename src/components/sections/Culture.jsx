@@ -1,170 +1,192 @@
 /**
  * Culture.jsx — "Our Culture" stacked-coin section
  *
- * Coin pillars rendered as SVG.
- * Each coin = white filled rect-with-rounded-top-arc shape.
- * Result: flat stacked discs, no slinky/spring look.
+ * Coins: SVG closed-path coins with curved elliptical sides (matches reference).
+ * Animation: CSS clip-path reveal (inset bottom → 0) on scroll — works on SVG.
+ * Mobile: single-column stacked layout, coins scale via SVG viewBox.
  */
 
-import { useRef } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import PillButton from '../common/PillButton'
 import { culturePhotos } from '../../data/siteData'
 
 // ─── SVG viewport ─────────────────────────────────────────────────────────────
-const VW = 480
-const VH = 980
+// Wide viewBox so coins have proper width and spacing between pillars
+const VW = 600
+const VH = 1200
 
-// Three columns
+// Three columns — each pillar has its own rx for per-column width control
+// Gap between pillar edges: col1_cx - col0_cx - col0_rx - col1_rx = spacing
+// 200 - 80 - 58 - 58 = 4px gap  → too tight, use cx spacing of 210
+// col0: cx=80,  rx=58  → edges at 22..138
+// col1: cx=300, rx=58  → edges at 242..358  (gap from col0 = 242-138 = 104px ✓)
+// col2: cx=520, rx=58  → edges at 462..578  (gap from col1 = 462-358 = 104px ✓)
 const COLS = [
-  { cx: 80,  rx: 38 },
-  { cx: 240, rx: 38 },
-  { cx: 400, rx: 38 },
+  { cx: 90,  rx: 58 },   // left
+  { cx: 300, rx: 58 },   // centre (tallest, widest)
+  { cx: 510, rx: 58 },   // right
 ]
 
-// Coin dimensions
-// COIN_H = vertical distance between top-arc centre and bottom-arc centre
-// The side border is a vertical ellipse arc with rx_side = small curve inward
-const COIN_H    = 10    // centre-to-centre distance top→bottom arc
-const COIN_RY   = 4     // ellipse ry for top/bottom arc (flat disc look)
-const COIN_RX   = 38    // ellipse rx (= column half-width)
-// Side arc: connects right endpoint of top arc to right endpoint of bottom arc
-// We use a tall narrow ellipse: rx_side = small (gives the curved-in side look)
-const SIDE_RX   = 4     // horizontal radius of the side arc curve
-const COIN_GAP  = 0     // gap between stacked coins (0 = flush)
-const STEP      = COIN_H + COIN_GAP
+// Coin geometry — wider, flatter discs matching reference
+const COIN_H  = 9     // coin height (top-arc to bottom-arc centre distance)
+const COIN_RY = 4     // ellipse ry — very flat disc
+const SIDE_RX = 8     // side arc rx — more pronounced curve on sides (was 2)
+const STEP    = COIN_H  // flush stacking
 
-// Red cap
-const CAP_RY = 6
-const CAP_RX = 42
+// Red cap — slightly wider than coin
+const CAP_RY = 8
+const CAP_RX = 64
 
-// Photo
-const PHOTO_R = 50
+// Photo circle radius
+const PHOTO_R = 56
 
-// Disc counts
-const TOP_N = [36, 48, 36]
-const BOT_N = [16, 20, 16]
+// Coin counts
+// Upper: left=44, centre=44, right=50 (few extra at bottom)
+const TOP_N = [44, 44, 50]
+// Lower: left=12, centre=20, right=4
+const BOT_N = [12, 20, 4]
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
-// baseY = centre of the bottom arc of the bottommost coin
-// Pillar total height (top arc centre to bottom arc centre) = (n-1) * STEP + COIN_H
-// Photo sits above the topmost coin's top arc centre
+// ─── Layout math ─────────────────────────────────────────────────────────────
+const MARGIN_BOT = 80   // extra space below lower cylinders
+const BOT_BASE   = VH - MARGIN_BOT   // more breathing room at bottom
 
-const MARGIN_BOT  = 12
-const BOT_BASE    = VH - MARGIN_BOT                                          // 968
+// Pillar height = (n-1)*STEP + COIN_H
+const pillarH = (n) => (n - 1) * STEP + COIN_H
 
-// Height from bottom arc centre to top arc centre of tallest bottom pillar
-const BOT_H_MAX   = (BOT_N[1] - 1) * STEP + COIN_H                          // 190+10=200
-// Photo centre = BOT_BASE - BOT_H_MAX - PHOTO_R - 2
-const BOT_PHOTO_CY = BOT_N.map(n =>
-  BOT_BASE - ((n - 1) * STEP + COIN_H) - PHOTO_R - 2
-)
+const BOT_H_MAX    = pillarH(BOT_N[1])   // centre bottom pillar height
+const BOT_PHOTO_CY = BOT_N.map(n => BOT_BASE - pillarH(n) - PHOTO_R - 2)
 
-const GROUP_GAP   = 26
-// TOP_BASE = bottom of top pillar group = top photo top of bottom group - gap
-const TOP_BASE    = BOT_BASE - BOT_H_MAX - PHOTO_R * 2 - 4 - GROUP_GAP
+const GROUP_GAP    = 30
+const TOP_BASE     = BOT_BASE - BOT_H_MAX - PHOTO_R * 2 - 6 - GROUP_GAP
 
-const TOP_PHOTO_CY = TOP_N.map(n =>
-  TOP_BASE - ((n - 1) * STEP + COIN_H) - PHOTO_R - 2
-)
+// Left & right sit lower than centre by this offset
+const TOP_SIDE_OFFSET = 80
 
-// ─── Coin path builder ────────────────────────────────────────────────────────
-/**
- * Each coin is a closed path with:
- *   - Top edge:    elliptical arc (rx, ry) left→right  [the top face]
- *   - Right side:  elliptical arc (SIDE_RX, COIN_H/2) top-right→bottom-right
- *                  This gives the curved-inward side border matching the reference
- *   - Bottom edge: elliptical arc (rx, ry) right→left  [the bottom face]
- *   - Left side:   elliptical arc (SIDE_RX, COIN_H/2) bottom-left→top-left
- *
- * `topCY` = y-coordinate of the TOP arc centre (not the top edge)
- * Top arc endpoints are at y = topCY (centre of top ellipse)
- * Bottom arc endpoints are at y = topCY + COIN_H
- */
+// Right pillar gets 6 extra coins at the bottom — lower its baseY by that amount
+const RIGHT_EXTRA = 6
+const TOP_BASE_PER_COL = [
+  TOP_BASE + TOP_SIDE_OFFSET,                    // left
+  TOP_BASE,                                       // centre — highest
+  TOP_BASE + TOP_SIDE_OFFSET + RIGHT_EXTRA * STEP, // right — extra coins at bottom
+]
+
+const TOP_PHOTO_CY = TOP_N.map((n, i) => TOP_BASE_PER_COL[i] - pillarH(n) - PHOTO_R - 2)
+
+// ─── Coin path ────────────────────────────────────────────────────────────────
+// Closed shape: top arc → right curved side → bottom arc → left curved side
+// topCY = y of top arc centre
 function coinPath(cx, rx, ry, sideRx, coinH, topCY) {
   const botCY = topCY + coinH
   const halfH = coinH / 2
   return [
-    // Start at left end of top arc
     `M ${cx - rx} ${topCY}`,
-    // Top arc: left → right (sweep=1 = clockwise = top of ellipse going right)
-    `A ${rx} ${ry} 0 0 1 ${cx + rx} ${topCY}`,
-    // Right side arc: top-right → bottom-right (curved inward)
-    // Large-arc=0, sweep=1 (curves right/outward slightly then down)
-    `A ${sideRx} ${halfH} 0 0 1 ${cx + rx} ${botCY}`,
-    // Bottom arc: right → left (sweep=1 = same direction = bottom of ellipse going left)
-    `A ${rx} ${ry} 0 0 1 ${cx - rx} ${botCY}`,
-    // Left side arc: bottom-left → top-left (curved inward, mirror of right)
-    `A ${sideRx} ${halfH} 0 0 1 ${cx - rx} ${topCY}`,
+    `A ${rx} ${ry} 0 0 1 ${cx + rx} ${topCY}`,       // top arc L→R
+    `A ${sideRx} ${halfH} 0 0 1 ${cx + rx} ${botCY}`, // right side arc (curved)
+    `A ${rx} ${ry} 0 0 1 ${cx - rx} ${botCY}`,        // bottom arc R→L
+    `A ${sideRx} ${halfH} 0 0 1 ${cx - rx} ${topCY}`, // left side arc (curved)
     `Z`,
   ].join(' ')
 }
 
-// ─── SvgPillar ────────────────────────────────────────────────────────────────
-function SvgPillar({ col, n, baseY, hasRedCap, inView, delay }) {
+// ─── SvgPillar with clip-path reveal ─────────────────────────────────────────
+// Uses an SVG <clipPath> with a rect whose Y position animates from bottom to top.
+// We drive this with inline style on the rect — but clipPath children don't
+// respond to CSS transforms in all browsers.
+// Instead: we animate the rect's `y` and `height` attributes via a CSS animation
+// defined in a <style> tag, keyed by pillarId.
+
+function SvgPillar({ col, n, baseY, hasRedCap, revealed, delay, pillarId }) {
   const { cx, rx } = COLS[col]
 
-  // topCY of each coin's top arc, from bottom coin (index 0) upward
-  // baseY = centre of the bottom arc of the bottommost coin
-  const coins = Array.from({ length: n }, (_, i) => {
-    const topCY = baseY - COIN_H - i * STEP
-    return topCY
-  })
+  const coins = Array.from({ length: n }, (_, i) => baseY - COIN_H - i * STEP)
+  const pillarTopCY = coins[n - 1]
 
-  const pillarTopCY = coins[n - 1]   // top arc centre of the topmost coin
+  const clipTop    = pillarTopCY - CAP_RY - PHOTO_R * 2 - 10
+  const clipBottom = baseY + COIN_RY + 4
+  const clipH      = clipBottom - clipTop
+  const clipId     = `cp-${pillarId}`
+  const animId     = `anim-${pillarId}`
 
   return (
-    <motion.g
-      style={{ transformOrigin: `${cx}px ${baseY}px` }}
-      initial={{ scaleY: 0 }}
-      animate={inView ? { scaleY: 1 } : { scaleY: 0 }}
-      transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay }}
-    >
-      {/* Each coin: closed path with curved sides */}
-      {coins.map((topCY, i) => (
-        <path
-          key={i}
-          d={coinPath(cx, rx, COIN_RY, SIDE_RX, COIN_H, topCY)}
-          fill="white"
-          stroke="#1a1a1a"
-          strokeWidth="0.85"
-        />
-      ))}
+    <g>
+      <defs>
+        {/* Keyframe: rect starts at clipBottom (height=0) and expands upward */}
+        {revealed && (
+          <style>{`
+            @keyframes ${animId} {
+              from { y: ${clipBottom}px; height: 0px; }
+              to   { y: ${clipTop}px;   height: ${clipH}px; }
+            }
+            #${clipId} rect {
+              animation: ${animId} 1.1s cubic-bezier(0.16,1,0.3,1) ${delay}s both;
+            }
+          `}</style>
+        )}
+        <clipPath id={clipId}>
+          <rect
+            x={cx - rx - 60}
+            y={revealed ? clipTop : clipBottom}
+            width={rx * 2 + 120}
+            height={revealed ? clipH : 0}
+          />
+        </clipPath>
+      </defs>
 
-      {/* Red cap on top */}
-      {hasRedCap && (
-        <ellipse
-          cx={cx}
-          cy={pillarTopCY - CAP_RY}
-          rx={CAP_RX}
-          ry={CAP_RY}
-          fill="#cf2436"
-          stroke="#1a1a1a"
-          strokeWidth="0.85"
-        />
-      )}
-    </motion.g>
+      <g clipPath={`url(#${clipId})`}>
+        {coins.map((topCY, i) => (
+          <path
+            key={i}
+            d={coinPath(cx, rx, COIN_RY, SIDE_RX, COIN_H, topCY)}
+            fill="white"
+            stroke="#1a1a1a"
+            strokeWidth="0.9"
+          />
+        ))}
+
+        {hasRedCap && (
+          <ellipse
+            cx={cx}
+            cy={pillarTopCY - CAP_RY}
+            rx={CAP_RX}
+            ry={CAP_RY}
+            fill="#cf2436"
+            stroke="#1a1a1a"
+            strokeWidth="0.9"
+          />
+        )}
+      </g>
+    </g>
   )
 }
 
 // ─── SvgPhoto ─────────────────────────────────────────────────────────────────
-function SvgPhoto({ id, col, cy, src, halo, inView, delay }) {
+function SvgPhoto({ id, col, cy, src, halo, revealed, delay }) {
   const { cx } = COLS[col]
-  const clipId = `clip-${id}`
+  const clipId = `cp-photo-${id}`
   const glowId = `glow-${id}`
+  const animId = `anim-photo-${id}`
 
   return (
-    <motion.g
-      style={{ transformOrigin: `${cx}px ${cy}px` }}
-      initial={{ opacity: 0, scale: 0.6 }}
-      animate={inView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }}
-      transition={{ duration: 0.65, ease: [0.34, 1.4, 0.64, 1], delay }}
-    >
+    <g>
       <defs>
+        {revealed && (
+          <style>{`
+            @keyframes ${animId} {
+              from { opacity: 0; transform: scale(0.55); }
+              to   { opacity: 1; transform: scale(1); }
+            }
+            .photo-${id} {
+              transform-origin: ${cx}px ${cy}px;
+              transform-box: fill-box;
+              animation: ${animId} 0.65s cubic-bezier(0.34,1.4,0.64,1) ${delay}s both;
+            }
+          `}</style>
+        )}
         {halo && (
           <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
-            <stop offset="0%"   stopColor={halo} stopOpacity="0.8" />
-            <stop offset="55%"  stopColor={halo} stopOpacity="0.15" />
+            <stop offset="0%"   stopColor={halo} stopOpacity="0.75" />
+            <stop offset="55%"  stopColor={halo} stopOpacity="0.12" />
             <stop offset="100%" stopColor={halo} stopOpacity="0" />
           </radialGradient>
         )}
@@ -173,22 +195,22 @@ function SvgPhoto({ id, col, cy, src, halo, inView, delay }) {
         </clipPath>
       </defs>
 
-      {halo && (
-        <circle cx={cx} cy={cy} r={PHOTO_R * 2.5} fill={`url(#${glowId})`} />
-      )}
-
-      <image
-        href={src}
-        x={cx - PHOTO_R}
-        y={cy - PHOTO_R}
-        width={PHOTO_R * 2}
-        height={PHOTO_R * 2}
-        clipPath={`url(#${clipId})`}
-        preserveAspectRatio="xMidYMid slice"
-      />
-
-      <circle cx={cx} cy={cy} r={PHOTO_R} fill="none" stroke="#1a1a1a" strokeWidth="0.9" />
-    </motion.g>
+      <g className={`photo-${id}`} style={{ opacity: revealed ? undefined : 0 }}>
+        {halo && (
+          <circle cx={cx} cy={cy} r={PHOTO_R * 2.4} fill={`url(#${glowId})`} />
+        )}
+        <image
+          href={src}
+          x={cx - PHOTO_R}
+          y={cy - PHOTO_R}
+          width={PHOTO_R * 2}
+          height={PHOTO_R * 2}
+          clipPath={`url(#${clipId})`}
+          preserveAspectRatio="xMidYMid slice"
+        />
+        <circle cx={cx} cy={cy} r={PHOTO_R} fill="none" stroke="#1a1a1a" strokeWidth="0.9" />
+      </g>
+    </g>
   )
 }
 
@@ -199,7 +221,7 @@ function CultureCopy({ title, button, href, copy, delay }) {
       className="relative"
       initial={{ opacity: 0, y: 32 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
+      viewport={{ once: true, amount: 0.15 }}
       transition={{ duration: 0.75, ease: 'easeOut', delay }}
     >
       <div className="relative inline-block">
@@ -225,8 +247,28 @@ function CultureCopy({ title, button, href, copy, delay }) {
 // ─── Section ──────────────────────────────────────────────────────────────────
 export default function Culture() {
   const sectionRef = useRef(null)
-  const inView     = useInView(sectionRef, { once: true, amount: 0.05 })
-  const photos     = culturePhotos
+  const svgRef     = useRef(null)
+  const [revealed, setRevealed] = useState(false)
+
+  // Use IntersectionObserver directly — more reliable than useInView for SVG
+  useEffect(() => {
+    const el = sectionRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setRevealed(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.08 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const photos = culturePhotos
 
   return (
     <section
@@ -235,77 +277,90 @@ export default function Culture() {
       className="relative isolate overflow-hidden"
       style={{ background: '#f4f4f4' }}
     >
+      {/* Background split — sits at the midpoint of the upper cylinders (~52%)
+          so upper cylinders straddle the gray/blue boundary */}
       <div
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 pointer-events-none"
-        style={{ top: '44%', background: '#e6edf8' }}
+        style={{ top: '52%', background: '#e6edf8' }}
       />
 
       <div className="relative mx-auto max-w-[1280px]">
         <div
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 pointer-events-none"
-          style={{ top: '44%', background: '#e6edf8' }}
+          style={{ top: '52%', background: '#e6edf8' }}
         />
 
+        {/* ── Two-column layout ── */}
         <div className="relative flex flex-col md:flex-row md:items-stretch">
 
-          {/* LEFT — coin SVG */}
+          {/* LEFT — SVG coin panel */}
           <div className="relative w-full shrink-0 md:w-[48%] lg:w-[45%]">
             <svg
+              ref={svgRef}
               viewBox={`0 0 ${VW} ${VH}`}
               xmlns="http://www.w3.org/2000/svg"
               className="w-full h-auto block"
               aria-hidden="true"
             >
-              {/* Top pillars (red cap) */}
+              {/* Top pillars — left & right sit lower than centre */}
               {TOP_N.map((n, col) => (
                 <SvgPillar
                   key={`t${col}`}
-                  col={col} n={n} baseY={TOP_BASE} hasRedCap
-                  inView={inView}
+                  pillarId={`t${col}`}
+                  col={col} n={n} baseY={TOP_BASE_PER_COL[col]} hasRedCap
+                  revealed={revealed}
                   delay={col === 1 ? 0.05 : col === 0 ? 0.15 : 0.2}
                 />
               ))}
 
-              {/* Bottom pillars (no cap) */}
+              {/* Bottom pillars */}
               {BOT_N.map((n, col) => (
                 <SvgPillar
                   key={`b${col}`}
+                  pillarId={`b${col}`}
                   col={col} n={n} baseY={BOT_BASE} hasRedCap={false}
-                  inView={inView}
+                  revealed={revealed}
                   delay={col === 1 ? 0.28 : 0.33}
                 />
               ))}
 
               {/* Top photos */}
-              <SvgPhoto id="tL" col={0} cy={TOP_PHOTO_CY[0]} src={photos[0].image} halo="#6496ff" inView={inView} delay={0.70} />
-              <SvgPhoto id="tC" col={1} cy={TOP_PHOTO_CY[1]} src={photos[1].image} halo="#ffc846" inView={inView} delay={0.58} />
-              <SvgPhoto id="tR" col={2} cy={TOP_PHOTO_CY[2]} src={photos[2].image} halo="#ff8c6e" inView={inView} delay={0.75} />
+              <SvgPhoto id="tL" col={0} cy={TOP_PHOTO_CY[0]} src={photos[0].image} halo="#6496ff" revealed={revealed} delay={0.70} />
+              <SvgPhoto id="tC" col={1} cy={TOP_PHOTO_CY[1]} src={photos[1].image} halo="#ffc846" revealed={revealed} delay={0.58} />
+              <SvgPhoto id="tR" col={2} cy={TOP_PHOTO_CY[2]} src={photos[2].image} halo="#ff8c6e" revealed={revealed} delay={0.75} />
 
               {/* Bottom photos */}
-              <SvgPhoto id="bL" col={0} cy={BOT_PHOTO_CY[0]} src={photos[3].image} inView={inView} delay={0.85} />
-              <SvgPhoto id="bC" col={1} cy={BOT_PHOTO_CY[1]} src={photos[4].image} inView={inView} delay={0.80} />
-              <SvgPhoto id="bR" col={2} cy={BOT_PHOTO_CY[2]} src={photos[5].image} inView={inView} delay={0.85} />
+              <SvgPhoto id="bL" col={0} cy={BOT_PHOTO_CY[0]} src={photos[3].image} revealed={revealed} delay={0.85} />
+              <SvgPhoto id="bC" col={1} cy={BOT_PHOTO_CY[1]} src={photos[4].image} revealed={revealed} delay={0.80} />
+              <SvgPhoto id="bR" col={2} cy={BOT_PHOTO_CY[2]} src={photos[5].image} revealed={revealed} delay={0.85} />
             </svg>
           </div>
 
-          {/* RIGHT — copy */}
-          <div className="relative z-20 flex flex-col justify-around gap-16 px-6 py-14 md:w-[52%] md:py-20 md:pl-10 md:pr-8 lg:pl-14 lg:pr-10 xl:pl-20">
-            <CultureCopy
-              title={['Rituals', 'That Echo', 'The Energy']}
-              button="OUR CULTURE"
-              href="#culture"
-              copy="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type."
-              delay={0.25}
-            />
-            <CultureCopy
-              title={['And Folks', 'Who Make', 'It Happen']}
-              button="JOIN THE TEAM"
-              href="#contact"
-              copy="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type."
-              delay={0.45}
-            />
+          {/* RIGHT — copy: two blocks aligned with the two halves of the section */}
+          <div className="relative z-20 flex flex-col md:w-[52%]">
+            {/* TOP copy — sits in the upper (gray) half */}
+            <div className="flex items-center px-6 py-14 md:h-[52%] md:items-start md:px-10 md:pt-20 md:pb-0 lg:px-14 xl:px-20">
+              <CultureCopy
+                title={['Rituals', 'That Echo', 'The Energy']}
+                button="OUR CULTURE"
+                href="#culture"
+                copy="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type."
+                delay={0.25}
+              />
+            </div>
+
+            {/* BOTTOM copy — sits in the lower (blue) half */}
+            <div className="flex items-center px-6 pb-14 md:h-[48%] md:items-start md:px-10 md:pt-12 md:pb-0 lg:px-14 xl:px-20">
+              <CultureCopy
+                title={['And Folks', 'Who Make', 'It Happen']}
+                button="JOIN THE TEAM"
+                href="#contact"
+                copy="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type."
+                delay={0.45}
+              />
+            </div>
           </div>
         </div>
       </div>

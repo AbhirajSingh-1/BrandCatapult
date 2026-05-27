@@ -1,8 +1,24 @@
 import { ArrowUpRight } from 'lucide-react'
+import { useState } from 'react'
 import SectionReveal from '../common/SectionReveal'
-import { assets, serviceBullets, serviceList } from '../../data/siteData'
+import { assets, serviceList } from '../../data/siteData'
+import { cn } from '../../utils/cn'
+
+const serviceDetails = [
+  ['Market Research & Analysis', 'Brand Positioning Strategy', 'Go-to-Market Planning', 'Consumer Insights', 'Competitor Benchmarking'],
+  ['Media Relations & Outreach', 'Press Release Distribution', 'Crisis Communication', 'Reputation Management', 'Influencer Relations'],
+  ['Social Media Management', 'Search Engine Optimization', 'Performance Marketing', 'Content Creation Strategy', 'Email Campaigns'],
+  ['Brand Identity Development', 'Re-Branding', 'Brand Communications', 'Brand Collaterals', 'Packaging Design', 'Marketing Collaterals'],
+  ['Event Production & Planning', 'Outdoor Advertising', 'Experiential Marketing', 'Retail Visual Merchandising', 'Direct Mail Campaigns'],
+  ['Commercial Product Shoots', 'Lifestyle Shoots', 'Corporate Headshots', 'Campaign Coverage', 'Post-Production Retouching'],
+  ['Custom Website Development', 'E-commerce Solutions', 'Mobile App Development', 'CMS Integration', 'Interactive Prototypes'],
+  ['3D Product Animation', 'Virtual Production Assets', 'VFX Compositing', 'Motion Graphics', 'Immersive Experiences'],
+]
 
 export default function Services() {
+  const [activeService, setActiveService] = useState(3)
+  const bullets = serviceDetails[activeService]
+
   return (
     <SectionReveal id="services" className="slant-top -mt-16 bg-cat-dark text-white md:-mt-20">
       <div className="relative mx-auto min-h-[760px] max-w-[1500px] px-5 py-28 sm:px-8 md:h-[670px] md:min-h-0 md:px-11 md:py-0 lg:h-[800px] lg:px-16">
@@ -10,25 +26,43 @@ export default function Services() {
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.5em] text-white">Our Services</p>
           <p className="mb-8 text-sm font-bold uppercase tracking-[0.2em] text-cat-red">People</p>
           <div className="space-y-4 md:space-y-5">
-            {serviceList.map((service, index) => (
-              <div key={service} className="flex items-center gap-3 md:gap-4">
-                {index === 3 ? <span className="w-5 font-mono text-[10px] text-white">04</span> : <span className="hidden w-5 md:block" />}
-                <h2
-                  className={`font-light uppercase leading-none transition ${
-                    index === 3
-                      ? 'text-[31px] text-cat-red md:text-[31px] lg:text-[42px]'
-                      : 'text-[25px] text-white/24 hover:text-white/55 md:text-[25px] lg:text-[34px]'
-                  }`}
+            {serviceList.map((service, index) => {
+              const isActive = index === activeService
+
+              return (
+                <button
+                  key={service}
+                  type="button"
+                  className="group flex w-full items-center gap-3 text-left md:gap-4"
+                  onMouseEnter={() => setActiveService(index)}
+                  onFocus={() => setActiveService(index)}
                 >
-                  {service}
-                </h2>
-                {index === 3 ? (
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cat-red text-white md:h-9 md:w-9">
-                    <ArrowUpRight size={18} strokeWidth={2.5} aria-hidden="true" />
+                  {isActive ? (
+                    <span className="w-5 font-mono text-[10px] text-white">{String(index + 1).padStart(2, '0')}</span>
+                  ) : (
+                    <span className="hidden w-5 md:block" />
+                  )}
+                  <span
+                    className={cn(
+                      'font-light uppercase leading-none transition duration-300',
+                      isActive
+                        ? 'text-[31px] text-cat-red md:text-[31px] lg:text-[42px]'
+                        : 'text-[25px] text-white/24 group-hover:text-white/55 md:text-[25px] lg:text-[34px]',
+                    )}
+                  >
+                    {service}
                   </span>
-                ) : null}
-              </div>
-            ))}
+                  {isActive ? (
+                    <>
+                      <span className="hidden h-px flex-1 bg-white/14 md:block" aria-hidden="true" />
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cat-red text-white shadow-[0_0_22px_rgba(207,36,54,0.42)] md:h-9 md:w-9">
+                        <ArrowUpRight size={18} strokeWidth={2.5} aria-hidden="true" />
+                      </span>
+                    </>
+                  ) : null}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -42,13 +76,13 @@ export default function Services() {
           <img
             src={assets.servicePreview}
             alt="Brand identity and cocktail presentation for a hospitality case study"
-            className="h-44 w-full rounded-sm object-cover sm:h-52 md:absolute md:right-[7.5%] md:top-[33%] md:h-[122px] md:w-[25%] lg:h-[170px] lg:w-[28%]"
+            className="h-44 w-full rounded-sm object-cover transition duration-700 hover:scale-[1.015] sm:h-52 md:absolute md:right-[7.5%] md:top-[33%] md:h-[122px] md:w-[25%] lg:h-[170px] lg:w-[28%]"
             loading="lazy"
           />
 
           <div className="border-t border-white/20 pt-5 md:absolute md:right-[7.5%] md:top-[53%] md:w-[38%] lg:top-[54%] lg:w-[40%]">
             <ul className="space-y-1.5 text-xs leading-relaxed text-white/78 lg:text-sm">
-              {serviceBullets.map((item) => (
+              {bullets.map((item) => (
                 <li key={item} className="flex gap-2">
                   <span className="mt-2 h-1 w-1 rounded-full bg-white" aria-hidden="true" />
                   <span>{item}</span>

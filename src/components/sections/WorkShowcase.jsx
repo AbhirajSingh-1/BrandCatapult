@@ -1,38 +1,20 @@
-import { useState } from 'react'
-import { ArrowUpRight, ChevronDown } from 'lucide-react'
+import 'swiper/css'
+import 'swiper/css/free-mode'
+
+import { motion } from 'framer-motion'
+import { ArrowUpRight } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
 import { Autoplay, FreeMode, Keyboard } from 'swiper/modules'
 import { Swiper, SwiperSlide } from 'swiper/react'
+import DropdownPill from '../common/DropdownPill'
 import PillButton from '../common/PillButton'
 import SectionReveal from '../common/SectionReveal'
+import Tag from '../common/Tag'
 import { assets, projectCards } from '../../data/siteData'
-
-function Tag({ children, filled = false, muted = false }) {
-  return (
-    <span
-      className={`inline-flex h-6 items-center rounded-full border px-3 text-[10px] font-bold uppercase tracking-[0.1em] ${
-        filled
-          ? 'border-cat-red bg-cat-red text-white'
-          : muted
-            ? 'border-white/90 bg-white text-cat-ink'
-            : 'border-white/65 text-white'
-      }`}
-    >
-      {children}
-    </span>
-  )
-}
-
-function FilterPill({ children }) {
-  return (
-    <span className="inline-flex h-9 items-center gap-2 rounded-full border border-white/85 bg-white px-5 text-[12px] font-bold uppercase tracking-[0.12em] text-cat-red shadow-[inset_0_-2px_0_rgba(0,0,0,0.12)]">
-      {children}
-      <ChevronDown size={13} strokeWidth={3} aria-hidden="true" />
-    </span>
-  )
-}
+import { audienceOptions, curateOptions, filterProjects } from '../../utils/projects'
 
 function ProjectCard({ project, index }) {
-  const isSecondCard = index === 1
+  const isFeaturedFill = project.title === 'HappiNest'
   const isShishu = project.title.toLowerCase() === 'shishu'
 
   return (
@@ -41,13 +23,13 @@ function ProjectCard({ project, index }) {
         <img
           src={project.image}
           alt={project.alt}
-          className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+          className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]"
           loading={index < 2 ? 'eager' : 'lazy'}
         />
       </div>
       <div className="mt-5 flex min-h-7 flex-wrap gap-2">
         {project.tags.map((tag, tagIndex) => (
-          <Tag key={tag} filled={isSecondCard && tagIndex === project.tags.length - 1}>
+          <Tag key={tag} filled={isFeaturedFill && tagIndex === project.tags.length - 1}>
             {tag}
           </Tag>
         ))}
@@ -58,19 +40,44 @@ function ProjectCard({ project, index }) {
 }
 
 export default function WorkShowcase() {
+  const [curateFilter, setCurateFilter] = useState('Branding')
+  const [audienceFilter, setAudienceFilter] = useState('D2C Brands')
   const [activeSlide, setActiveSlide] = useState(0)
-  const carouselCards = [...projectCards, ...projectCards]
-  const progress = ((activeSlide % projectCards.length) + 1) / projectCards.length
+  const [openFilter, setOpenFilter] = useState(null)
+  const swiperRef = useRef(null)
+
+  const filteredProjects = useMemo(
+    () => filterProjects(projectCards, curateFilter, audienceFilter),
+    [curateFilter, audienceFilter],
+  )
+
+  const slides = filteredProjects.length > 1 ? [...filteredProjects, ...filteredProjects] : filteredProjects
+  const progress = filteredProjects.length ? ((activeSlide % filteredProjects.length) + 1) / filteredProjects.length : 0
+
+  const selectFilter = (setter) => (value) => {
+    setter(value)
+    setOpenFilter(null)
+    setActiveSlide(0)
+  }
+
+  const goToSlide = (index) => {
+    setActiveSlide(index)
+    swiperRef.current?.slideToLoop?.(index)
+  }
 
   return (
     <SectionReveal id="work" className="overflow-hidden bg-cat-dark text-white">
       <div className="relative border-t border-cat-red/25 bg-cat-dark">
         <div className="relative min-h-[560px] overflow-hidden sm:min-h-[620px] md:min-h-[535px] lg:min-h-[650px]">
-          <img
+          <motion.img
             src={assets.featuredPerson}
             alt="Featured Accato campaign performer in dark hoodie"
             className="absolute inset-0 h-full w-full object-cover object-[50%_22%] opacity-80"
             loading="lazy"
+            initial={{ scale: 1.04 }}
+            whileInView={{ scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
           />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_45%_20%,rgba(255,255,255,0.12),transparent_30%),linear-gradient(180deg,rgba(18,18,18,0.22),rgba(18,18,18,0.52)_62%,#171717_100%)]" aria-hidden="true" />
 
@@ -104,7 +111,7 @@ export default function WorkShowcase() {
                 </div>
                 <p className="text-[13px] leading-[1.3] text-white/90 sm:text-sm">
                   Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard
-                  dummy text ever since the 1500s, when an unknown printer took a galley of type
+                  dummy text ever since the 1500s, when an unknown printer took a galley of type.
                 </p>
               </div>
             </div>
@@ -122,47 +129,79 @@ export default function WorkShowcase() {
 
           <div className="relative z-10 mx-auto max-w-[1500px]">
             <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
-              <div className="flex gap-2">
-                <span className="h-2 w-2 rounded-full bg-white" />
-                <span className="h-2 w-2 rounded-full bg-white/55" />
-                <span className="h-2 w-2 rounded-full bg-cat-red" />
-                <span className="h-2 w-2 rounded-full bg-white/55" />
+              <div className="flex gap-2" aria-label="Project carousel slides">
+                {(filteredProjects.length ? filteredProjects : projectCards).map((project, index) => (
+                  <button
+                    key={project.title}
+                    type="button"
+                    className={`h-2 w-2 rounded-full transition ${filteredProjects.length && index === activeSlide % filteredProjects.length ? 'bg-cat-red' : 'bg-white/60 hover:bg-white'}`}
+                    onClick={() => goToSlide(index)}
+                    aria-label={`Show project ${index + 1}`}
+                    disabled={!filteredProjects.length}
+                  />
+                ))}
               </div>
               <div className="flex flex-wrap items-center gap-5 text-[12px] font-bold uppercase tracking-[0.5em] text-white/88">
                 <span>We Curate</span>
-                <FilterPill>Branding</FilterPill>
+                <DropdownPill
+                  label="Select project discipline"
+                  value={curateFilter}
+                  options={curateOptions}
+                  open={openFilter === 'curate'}
+                  onToggle={() => setOpenFilter((current) => (current === 'curate' ? null : 'curate'))}
+                  onSelect={selectFilter(setCurateFilter)}
+                />
                 <span>For</span>
-                <FilterPill>D2C Brands</FilterPill>
+                <DropdownPill
+                  label="Select project audience"
+                  value={audienceFilter}
+                  options={audienceOptions}
+                  open={openFilter === 'audience'}
+                  onToggle={() => setOpenFilter((current) => (current === 'audience' ? null : 'audience'))}
+                  onSelect={selectFilter(setAudienceFilter)}
+                />
               </div>
             </div>
 
             <div className="mt-12 md:mt-14 lg:mt-20">
-              <Swiper
-                modules={[Autoplay, FreeMode, Keyboard]}
-                autoplay={{ delay: 3200, disableOnInteraction: false, pauseOnMouseEnter: true }}
-                freeMode={{ enabled: true, momentum: true, momentumRatio: 0.9 }}
-                grabCursor
-                keyboard={{ enabled: true }}
-                loop
-                speed={850}
-                slidesPerView={1.08}
-                spaceBetween={24}
-                watchOverflow={false}
-                onSlideChange={(swiper) => setActiveSlide(swiper.realIndex ?? swiper.activeIndex)}
-                breakpoints={{
-                  640: { slidesPerView: 2.05, spaceBetween: 24 },
-                  768: { slidesPerView: 3.05, spaceBetween: 18 },
-                  1024: { slidesPerView: 3.05, spaceBetween: 28 },
-                  1200: { slidesPerView: 3.1, spaceBetween: 34 },
-                  1500: { slidesPerView: 3.25, spaceBetween: 34 },
-                }}
-              >
-                {carouselCards.map((project, index) => (
-                  <SwiperSlide key={`${project.title}-${index}`}>
-                    <ProjectCard project={project} index={index % projectCards.length} />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
+              {slides.length ? (
+                <Swiper
+                  key={`${curateFilter}-${audienceFilter}`}
+                  modules={[Autoplay, FreeMode, Keyboard]}
+                  autoplay={{ delay: 3200, disableOnInteraction: false, pauseOnMouseEnter: true }}
+                  freeMode={{ enabled: true, momentum: true, momentumRatio: 0.9 }}
+                  grabCursor
+                  keyboard={{ enabled: true }}
+                  loop={filteredProjects.length > 1}
+                  speed={850}
+                  slidesPerView={1.08}
+                  spaceBetween={24}
+                  watchOverflow
+                  onSwiper={(swiper) => {
+                    swiperRef.current = swiper
+                  }}
+                  onSlideChange={(swiper) => {
+                    setActiveSlide((swiper.realIndex ?? swiper.activeIndex) % filteredProjects.length)
+                  }}
+                  breakpoints={{
+                    640: { slidesPerView: 2.05, spaceBetween: 24 },
+                    768: { slidesPerView: 3.05, spaceBetween: 18 },
+                    1024: { slidesPerView: 3.05, spaceBetween: 28 },
+                    1200: { slidesPerView: 3.1, spaceBetween: 34 },
+                    1500: { slidesPerView: 3.25, spaceBetween: 34 },
+                  }}
+                >
+                  {slides.map((project, index) => (
+                    <SwiperSlide key={`${project.title}-${index}`}>
+                      <ProjectCard project={project} index={index % filteredProjects.length} />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              ) : (
+                <div className="grid min-h-[296px] place-items-center rounded-md border border-white/10 bg-white/5 px-6 text-center text-sm font-bold uppercase tracking-[0.2em] text-white/58">
+                  No projects match the selected filters.
+                </div>
+              )}
             </div>
 
             <div className="mt-12 flex items-center justify-center" aria-label="Project carousel progress">
